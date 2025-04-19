@@ -5,8 +5,12 @@ import (
 	"time"
 )
 
-func LoadConfig() Config {
-	return Config{
+type App struct {
+	cfg Config
+}
+
+func (a *App) LoadConfig() {
+	a.cfg = Config{
 		Server: ServerConfig{
 			Addr: lib.GetStringFromEnv("ADDR", ":8080"),
 		},
@@ -24,4 +28,8 @@ func LoadConfig() Config {
 			SSLMode:  lib.GetStringFromEnv("DB_SSLMODE", "disable"),
 		},
 	}
+}
+
+// TODO
+func (a App) RunServer() {
 }
