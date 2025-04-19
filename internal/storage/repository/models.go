@@ -2,6 +2,14 @@ package repository
 
 import "time"
 
+type FriendshipStatus string
+
+const (
+	StatusPending    FriendshipStatus = "pending"
+	StatusRejected   FriendshipStatus = "rejected"
+	StatusFriendship FriendshipStatus = "friendship"
+)
+
 type User struct {
 	ID       uint   `gorm:"primaryKey" json:"id"`
 	Email    string `gorm:"unique;not null" json:"email"`
@@ -9,6 +17,14 @@ type User struct {
 
 	Chats    []Chat    `json:"chats,omitempty" gorm:"many2many:user_chats;"`
 	Messages []Message `json:"messages,omitempty" gorm:"foreignKey:SenderID"`
+}
+
+type Friendship struct {
+	ID         uint             `gorm:"primaryKey"`
+	SenderID   uint             `json:"sender_id"`
+	ReceiverID uint             `json:"receiver_id"`
+	Status     FriendshipStatus `gorm:"type:friendship_status;default:'pending'" json:"status"`
+	CreatedAt  time.Time        `json:"created_at"`
 }
 
 type RefreshToken struct {
