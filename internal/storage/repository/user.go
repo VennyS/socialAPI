@@ -4,8 +4,6 @@ import "gorm.io/gorm"
 
 type UserRepository interface {
 	Create(user *User) error
-	// Authenticate(email, password string) (*User, error)
-	// Exists(email string) (bool, error)
 	FindByEmail(email string) (*User, error)
 }
 
@@ -31,6 +29,3 @@ func (repo userPostgresRepo) Create(user *User) error {
 	}
 	return nil
 }
-
-// func (repo userPostgresRepo) Authenticate(email, password string) (*User, error)
-// func (repo userPostgresRepo) Exists(email string) (bool, error)
