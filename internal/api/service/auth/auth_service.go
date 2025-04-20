@@ -6,6 +6,7 @@ import (
 	"socialAPI/internal/lib"
 	"socialAPI/internal/setting/cfg"
 	"socialAPI/internal/shared"
+	"socialAPI/internal/storage/repository"
 	r "socialAPI/internal/storage/repository"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 
 type AuthService interface {
 	Authenticate(UserRequest) (string, string, *shared.HttpError)
+	Register(r UserRequest) *shared.HttpError
 }
 
 type authService struct {
@@ -24,6 +26,31 @@ type authService struct {
 
 func NewAuthService(userRepo r.UserRepository, refreshRepo r.RefreshTokenRepository, cfg cfg.AuthConfig) AuthService {
 	return &authService{userRepo: userRepo, refreshRepo: refreshRepo, cfg: cfg}
+}
+
+func (a authService) Register(r UserRequest) *shared.HttpError {
+	exists, err := a.userRepo.Exists(r.Email)
+	if err != nil {
+		return shared.InternalError
+	}
+
+	if exists {
+		return shared.NewHttpError("user already exits", http.StatusNotFound)
+	}
+
+	hashedPassword, err := lib.HashPassword(r.Password)
+
+	if err != nil {
+		return shared.InternalError
+	}
+
+	err = a.userRepo.Create(&repository.User{Email: r.Email, Password: hashedPassword})
+
+	if err != nil {
+		return shared.InternalError
+	}
+
+	return nil
 }
 
 func (a authService) Authenticate(r UserRequest) (string, string, *shared.HttpError) {

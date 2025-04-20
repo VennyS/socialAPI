@@ -11,13 +11,13 @@ import (
 
 func (c AuthController) LoginHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		req, err := l.GetFromContext[auth.UserRequest](r.Context(), api.DataKey)
-		if err != nil {
-			http.Error(w, "invalid login data", http.StatusBadRequest)
+		req := r.Context().Value(api.IdKey).(auth.UserRequest)
+
+		access, refresh, hErr := c.authService.Authenticate(req)
+		if hErr != nil {
+			l.SendMessage(w, r, hErr.StatusCode, hErr.Error())
 			return
 		}
-
-		access, refresh, err := c.authService.Authenticate(req)
 
 		response := auth.LoginResponse{AccessToken: access, RefreshToken: refresh}
 
@@ -28,7 +28,18 @@ func (c AuthController) LoginHandler() http.HandlerFunc {
 
 func (c AuthController) RegisterHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		req := r.Context().Value(api.IdKey).(auth.UserRequest)
 
+		hErr := c.authService.Register(req)
+		if hErr != nil {
+			l.SendMessage(w, r, hErr.StatusCode, hErr.Error())
+			return
+		}
+
+		render.Status(r, http.StatusCreated)
+		render.JSON(w, r, map[string]string{
+			"message": "user created successfully",
+		})
 	}
 }
 func (c AuthController) RefreshHandler() http.HandlerFunc {
