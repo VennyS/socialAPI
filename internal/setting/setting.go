@@ -8,6 +8,7 @@ import (
 	"socialAPI/internal/lib"
 	"socialAPI/internal/setting/cfg"
 	"socialAPI/internal/storage"
+	"socialAPI/internal/storage/cache"
 	"socialAPI/internal/storage/repository"
 	"time"
 
@@ -19,6 +20,7 @@ type App struct {
 	cfg     cfg.Config
 	db      *gorm.DB
 	service srv.Service
+	cache   cache.CacheStore
 }
 
 func (a *App) LoadConfig() {
@@ -39,10 +41,16 @@ func (a *App) LoadConfig() {
 			Name:     lib.GetStringFromEnv("DB_NAME", "socialdb"),
 			SSLMode:  lib.GetStringFromEnv("DB_SSLMODE", "disable"),
 		},
+		Redis: cfg.RedisConfig{
+			Host:     lib.GetStringFromEnv("REDIS_HOST", "localhost"),
+			Port:     lib.GetStringFromEnv("REDIS_PORT", "6379"),
+			Password: lib.GetStringFromEnv("REDIS_PASSWORD", ""),
+			DB:       lib.GetIntFromEnv("REDIS_DB", 0),
+		},
 	}
 }
 
-func (a *App) ConnectDB() {
+func (a *App) InitStorages(madeMigrations bool) {
 	dsn := fmt.Sprintf(
 		"host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
 		a.cfg.DB.Host,
@@ -54,6 +62,16 @@ func (a *App) ConnectDB() {
 	)
 
 	a.db = storage.BootstrapDatabase(dsn)
+	if madeMigrations {
+		storage.MadeMigrations(a.db)
+	}
+
+	redis, err := cache.NewRedis(a.cfg.Redis)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to initialize Redis: %v", err))
+	}
+
+	a.cache = redis
 }
 
 func (a *App) MountServices() {
