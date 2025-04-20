@@ -17,6 +17,7 @@ type AuthService interface {
 	Authenticate(UserRequest) (string, string, *shared.HttpError)
 	Register(r UserRequest) *shared.HttpError
 	Refresh(r RefreshRequest) (string, string, *shared.HttpError)
+	Revoke(r RefreshRequest) *shared.HttpError
 }
 
 type authService struct {
@@ -84,7 +85,7 @@ func (a authService) Authenticate(r UserRequest) (string, string, *shared.HttpEr
 func (a authService) Refresh(r RefreshRequest) (string, string, *shared.HttpError) {
 	userID, err := a.refreshRepo.GetUserIDIfValid(r.Refresh)
 	if err != nil {
-		return "", "", shared.NewHttpError("invalid or expired refresh token", http.StatusUnauthorized)
+		return "", "", shared.NewHttpError(err.Error(), http.StatusUnauthorized)
 	}
 
 	access, newRefresh, err := lib.GenerateTokenPair(userID, a.cfg.AccessTTL, a.cfg.AccessSecret)
@@ -98,4 +99,14 @@ func (a authService) Refresh(r RefreshRequest) (string, string, *shared.HttpErro
 	}
 
 	return access, newRefresh, nil
+}
+
+func (a authService) Revoke(r RefreshRequest) *shared.HttpError {
+	err := a.refreshRepo.RevokeRefreshToken(r.Refresh)
+
+	if err != nil {
+		return shared.InternalError
+	}
+
+	return nil
 }

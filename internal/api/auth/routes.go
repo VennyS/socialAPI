@@ -20,5 +20,6 @@ func (a AuthController) RegisterRoutes(r *chi.Mux) {
 		r.With(api.JsonBodyMiddleware[auth.UserRequest]()).Post("/login", a.LoginHandler())
 		r.With(api.JsonBodyMiddleware[auth.UserRequest]()).Post("/register", a.RegisterHandler())
 		r.With(api.JsonBodyMiddleware[auth.RefreshRequest]()).Post("/refresh", a.RefreshHandler())
+		r.With(api.JsonBodyMiddleware[auth.RefreshRequest]()).Post("/logout", a.LogoutHandler())
 	})
 }

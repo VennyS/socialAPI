@@ -12,7 +12,7 @@ type RefreshTokenRepository interface {
 	SetRefreshToken(userID uint, token string, expiresAt time.Time) error
 	FindByUserID(userID uint) (*RefreshToken, error)
 	GetUserIDIfValid(token string) (uint, error)
-	RevokeRefreshToken(userID uint) error
+	RevokeRefreshToken(token string) error
 	UpdateRefreshToken(userID uint, token string, expiresAt time.Time) error
 }
 
@@ -59,20 +59,20 @@ func (repo refreshTokenPostgresRepo) GetUserIDIfValid(token string) (uint, error
 	}
 
 	if refreshToken.Revoked {
-		return 0, errors.New("token revoked")
+		return 0, errors.New("refresh token revoked")
 	}
 
 	if refreshToken.ExpiresAt.Before(time.Now()) {
-		return 0, errors.New("token expired")
+		return 0, errors.New("refresh token expired")
 	}
 
 	return refreshToken.UserID, nil
 }
 
-func (repo refreshTokenPostgresRepo) RevokeRefreshToken(userID uint) error {
+func (repo refreshTokenPostgresRepo) RevokeRefreshToken(token string) error {
 	result := repo.db.Model(&RefreshToken{}).
-		Where("UserID = ?", userID).
-		Update("Revoked", true)
+		Where("token = ?", token).
+		Update("revoked", true)
 
 	if result.Error != nil {
 		return result.Error

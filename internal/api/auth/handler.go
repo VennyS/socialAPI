@@ -37,10 +37,7 @@ func (c AuthController) RegisterHandler() http.HandlerFunc {
 			return
 		}
 
-		render.Status(r, http.StatusCreated)
-		render.JSON(w, r, map[string]string{
-			"message": "user created successfully",
-		})
+		lib.SendMessage(w, r, http.StatusCreated, "user created successfully")
 	}
 }
 
@@ -63,6 +60,14 @@ func (c AuthController) RefreshHandler() http.HandlerFunc {
 
 func (c AuthController) LogoutHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		req := r.Context().Value(api.DataKey).(auth.RefreshRequest)
 
+		err := c.authService.Revoke(req)
+		if err != nil {
+			l.SendMessage(w, r, err.StatusCode, err.Error())
+			return
+		}
+
+		lib.SendMessage(w, r, http.StatusOK, "revoked succefully")
 	}
 }
