@@ -1,6 +1,15 @@
 version: '3.9'
 
 services:
+  redis:
+    image: redis:latest
+    container_name: redis
+    ports:
+      - "6379:6379"
+    networks:
+      - mynetwork
+    restart: always
+
   db:
     image: postgres:15
     restart: always
@@ -8,6 +17,8 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: socialdb
+    networks:
+      - mynetwork
     ports:
       - "5433:5432"
     volumes:
@@ -15,3 +26,8 @@ services:
 
 volumes:
   postgres_data:
+
+  
+networks:
+  mynetwork:
+    driver: bridge
