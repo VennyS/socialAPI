@@ -7,6 +7,7 @@ import (
 	"socialAPI/internal/api/service/auth"
 	"socialAPI/internal/lib"
 	"socialAPI/internal/setting/cfg"
+	"socialAPI/internal/shared"
 	"socialAPI/internal/storage"
 	"socialAPI/internal/storage/cache"
 	"socialAPI/internal/storage/repository"
@@ -75,15 +76,15 @@ func (a *App) InitStorages(madeMigrations bool) {
 }
 
 func (a *App) MountServices() {
-	repo := repository.NewPostgresRepo(a.db)
+	postgresRepo := repository.NewPostgresRepo(a.db)
+	tokenService := shared.NewTokenService(a.cfg.Auth.AccessSecret, a.cfg.Auth.AccessTTL)
+	authService := auth.NewAuthService(postgresRepo.Users(), postgresRepo.RefreshTokens(), a.cfg.Auth, a.cache, *tokenService)
 
-	authService := auth.NewAuthService(repo.Users(), repo.RefreshTokens(), a.cfg.Auth)
-
-	a.service = srv.NewService(authService)
+	a.service = srv.NewService(authService, *tokenService)
 }
 
 func (a App) MountRouter() *chi.Mux {
-	authController := au.NewAuthController(a.service.Auth())
+	authController := au.NewAuthController(a.service.Auth(), a.service.Token())
 	r := chi.NewRouter()
 	authController.RegisterRoutes(r)
 
