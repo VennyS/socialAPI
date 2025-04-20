@@ -6,6 +6,7 @@ type Config struct {
 	Server ServerConfig
 	Auth   AuthConfig
 	DB     DBConfig
+	Redis  RedisConfig
 }
 
 type ServerConfig struct {
@@ -25,4 +26,11 @@ type DBConfig struct {
 	Password string
 	Name     string
 	SSLMode  string
+}
+
+type RedisConfig struct {
+	Host     string
+	Port     string
+	Password string
+	DB       int
 }
