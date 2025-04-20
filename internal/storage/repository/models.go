@@ -25,12 +25,15 @@ type Friendship struct {
 	ReceiverID uint             `json:"receiver_id"`
 	Status     FriendshipStatus `gorm:"type:friendship_status;default:'pending'" json:"status"`
 	CreatedAt  time.Time        `json:"created_at"`
+
+	Sender   User `gorm:"foreignKey:SenderID" json:"-"`
+	Receiver User `gorm:"foreignKey:ReceiverID" json:"-"`
 }
 
 type RefreshToken struct {
 	ID        uint      `gorm:"primaryKey" json:"id"`
 	Token     string    `gorm:"unique;not null" json:"token"`
-	UserID    uint      `gorm:"index;not null" json:"user_id"`
+	UserID    uint      `gorm:"uniqueIndex;not null" json:"user_id"`
 	Revoked   bool      `gorm:"default:false" json:"revoked"`
 	ExpiresAt time.Time `gorm:"not null" json:"expires_at"`
 	CreatedAt time.Time `json:"created_at"`
