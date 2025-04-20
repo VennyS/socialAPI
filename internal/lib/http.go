@@ -9,6 +9,11 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+func HashPassword(password string) (string, error) {
+	bytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	return string(bytes), err
+}
+
 func ComparePasswords(hashedPwd string, plainPwd string) error {
 	return bcrypt.CompareHashAndPassword([]byte(hashedPwd), []byte(plainPwd))
 }
@@ -29,7 +34,7 @@ func ValidateFields(fields map[string]string) error {
 	return nil
 }
 
-func SendError(w http.ResponseWriter, r *http.Request, statusCode int, message string) {
+func SendMessage(w http.ResponseWriter, r *http.Request, statusCode int, message string) {
 	render.Status(r, statusCode)
 	render.JSON(w, r, map[string]string{"message": message})
 }
