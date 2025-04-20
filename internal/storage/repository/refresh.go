@@ -8,19 +8,18 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-type RefreshTokenRepository interface {
+type RefreshTokenService interface {
 	SetRefreshToken(userID uint, token string, expiresAt time.Time) error
 	FindByUserID(userID uint) (*RefreshToken, error)
 	GetUserIDIfValid(token string) (uint, error)
 	RevokeRefreshToken(token string) error
-	UpdateRefreshToken(userID uint, token string, expiresAt time.Time) error
 }
 
 type refreshTokenPostgresRepo struct {
 	db *gorm.DB
 }
 
-func NewPostgresRefreshTokenRepo(db *gorm.DB) RefreshTokenRepository {
+func NewPostgresRefreshtokenService(db *gorm.DB) RefreshTokenService {
 	return refreshTokenPostgresRepo{db: db}
 }
 

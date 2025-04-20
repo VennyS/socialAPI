@@ -3,16 +3,18 @@ package auth
 import (
 	"socialAPI/internal/api"
 	"socialAPI/internal/api/service/auth"
+	"socialAPI/internal/shared"
 
 	"github.com/go-chi/chi/v5"
 )
 
 type AuthController struct {
-	authService auth.AuthService
+	authService  auth.AuthService
+	tokenService shared.TokenService
 }
 
-func NewAuthController(authService auth.AuthService) *AuthController {
-	return &AuthController{authService: authService}
+func NewAuthController(authService auth.AuthService, tokenService shared.TokenService) *AuthController {
+	return &AuthController{authService: authService, tokenService: tokenService}
 }
 
 func (a AuthController) RegisterRoutes(r *chi.Mux) {
