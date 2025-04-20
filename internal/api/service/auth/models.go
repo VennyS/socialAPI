@@ -5,6 +5,10 @@ type UserRequest struct {
 	Password string `json:"password" validate:"required"`
 }
 
+type RefreshRequest struct {
+	Refresh string `json:"refresh_token" validate:"required"`
+}
+
 type LoginResponse struct {
 	AccessToken  string `json:"access_token"`
 	RefreshToken string `json:"refresh_token"`
