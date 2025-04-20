@@ -17,15 +17,16 @@ func JsonBodyMiddleware[T any]() func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			var body T
+
 			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-				l.SendError(w, r, http.StatusBadRequest, "invalid request body")
+				l.SendMessage(w, r, http.StatusBadRequest, "invalid request body")
 				return
 			}
 
 			validate := validator.New()
 
 			if err := validate.Struct(body); err != nil {
-				l.SendError(w, r, http.StatusBadRequest, err.Error())
+				l.SendMessage(w, r, http.StatusBadRequest, err.Error())
 				return
 			}
 
