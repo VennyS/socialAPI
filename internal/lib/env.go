@@ -3,12 +3,25 @@ package lib
 import (
 	"log"
 	"os"
+	"strconv"
 	"time"
 )
 
 func GetStringFromEnv(key, fallback string) string {
 	if value, exists := os.LookupEnv(key); exists {
 		return value
+	}
+	return fallback
+}
+
+func GetIntFromEnv(key string, fallback int) int {
+	if value, exists := os.LookupEnv(key); exists {
+		intValue, err := strconv.Atoi(value)
+		if err != nil {
+			log.Printf("Invalid integer for %s: %v, using default value %d", key, err, fallback)
+			return fallback
+		}
+		return intValue
 	}
 	return fallback
 }
