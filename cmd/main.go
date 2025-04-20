@@ -1,7 +1,17 @@
 package main
 
-import "fmt"
+import (
+	"net/http"
+	"socialAPI/internal/setting"
+)
 
 func main() {
-	fmt.Println("OK")
+	app := setting.App{}
+	app.LoadConfig()
+	app.ConnectDB()
+	app.MountServices()
+
+	r := app.MountRouter()
+
+	http.ListenAndServe(":8080", r)
 }

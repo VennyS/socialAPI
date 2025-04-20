@@ -19,7 +19,7 @@ type refreshTokenPostgresRepo struct {
 	db *gorm.DB
 }
 
-func NewRefreshTokenPostgresRepo(db *gorm.DB) RefreshTokenRepository {
+func NewPostgresRefreshTokenRepo(db *gorm.DB) RefreshTokenRepository {
 	return refreshTokenPostgresRepo{db: db}
 }
 
