@@ -11,12 +11,13 @@ import (
 func GenerateTokenPair(userID uint, accessTokenTTL time.Duration, accessSecret string) (string, string, error) {
 	access, err := GenerateToken(userID, accessTokenTTL, accessSecret)
 	if err != nil {
-		return "", "", nil
+		return "", "", err
 	}
 
 	refresh, err := GenerateRefreshToken()
 	if err != nil {
-		return "", "", nil
+
+		return "", "", err
 	}
 
 	return access, refresh, err
@@ -28,7 +29,7 @@ func GenerateToken(userID uint, accessTokenTTL time.Duration, accessSecret strin
 		"exp":     time.Now().Add(accessTokenTTL).Unix(),
 	}
 	accessToken := jwt.NewWithClaims(jwt.SigningMethodHS256, accessClaims)
-	signedAccess, err := accessToken.SignedString(accessSecret)
+	signedAccess, err := accessToken.SignedString([]byte(accessSecret))
 	if err != nil {
 		return "", err
 	}
