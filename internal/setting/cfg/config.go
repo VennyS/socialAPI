@@ -1,4 +1,4 @@
-package setting
+package cfg
 
 import "time"
 
