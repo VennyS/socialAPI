@@ -2,7 +2,6 @@ package storage
 
 import (
 	"fmt"
-	"log"
 	repo "socialAPI/internal/storage/repository"
 
 	"gorm.io/driver/postgres"
@@ -13,10 +12,14 @@ import (
 func BootstrapDatabase(dsn string) *gorm.DB {
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
-		log.Fatalf("Error database connection: %v", err)
+		panic(fmt.Sprintf("Error database connection: %v", err))
 	}
 
-	err = db.Exec(`
+	return db
+}
+
+func MadeMigrations(db *gorm.DB) {
+	err := db.Exec(`
 		DO $$
 		BEGIN
 			IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'friendship_status') THEN
@@ -26,13 +29,12 @@ func BootstrapDatabase(dsn string) *gorm.DB {
 		$$;
 	`).Error
 	if err != nil {
-		log.Fatalf("Error creating enum type: %v", err)
+		panic(fmt.Sprintf("Error creating enum type: %v", err))
 	}
 
 	if err := db.AutoMigrate(&repo.User{}, &repo.Chat{}, &repo.Message{}, &repo.Friendship{}, &repo.RefreshToken{}); err != nil {
-		log.Fatalf("Migrations went wrong: %v", err)
+		panic(fmt.Sprintf("Migrations went wrong: %v", err))
 	}
 
 	fmt.Println("Migration success")
-	return db
 }
