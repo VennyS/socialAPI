@@ -2,10 +2,12 @@ package auth
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"socialAPI/internal/lib"
 	"socialAPI/internal/setting/cfg"
 	"socialAPI/internal/shared"
+	"socialAPI/internal/storage/cache"
 	"socialAPI/internal/storage/repository"
 	r "socialAPI/internal/storage/repository"
 	"time"
@@ -14,20 +16,43 @@ import (
 )
 
 type AuthService interface {
-	Authenticate(UserRequest) (string, string, *shared.HttpError)
+	Authenticate(UserRequest) (*shared.TokenPair, *shared.HttpError)
 	Register(r UserRequest) *shared.HttpError
-	Refresh(r RefreshRequest) (string, string, *shared.HttpError)
+	Refresh(r RefreshRequest) (*shared.TokenPair, *shared.HttpError)
 	Revoke(r RefreshRequest) *shared.HttpError
 }
 
 type authService struct {
-	userRepo    r.UserRepository
-	refreshRepo r.RefreshTokenRepository
-	cfg         cfg.AuthConfig
+	userRepo     r.UserRepository
+	refreshRepo  r.RefreshTokenService
+	cfg          cfg.AuthConfig
+	cache        cache.CacheStore
+	tokenService shared.TokenService
 }
 
-func NewAuthService(userRepo r.UserRepository, refreshRepo r.RefreshTokenRepository, cfg cfg.AuthConfig) AuthService {
-	return &authService{userRepo: userRepo, refreshRepo: refreshRepo, cfg: cfg}
+func NewAuthService(userRepo r.UserRepository, refreshRepo r.RefreshTokenService, cfg cfg.AuthConfig, cache cache.CacheStore, tokenService shared.TokenService) AuthService {
+	return &authService{userRepo: userRepo, refreshRepo: refreshRepo, cfg: cfg, cache: cache, tokenService: tokenService}
+}
+
+func (a authService) generateAndStoreTokens(id uint) (*shared.TokenPair, *shared.HttpError) {
+	tokenPair, err := a.tokenService.GenerateTokenPair(id)
+	if err != nil {
+		return nil, shared.InternalError // Тут ошибка, если токены не могут быть сгенерированы
+	}
+
+	// Проверяем установку access токена в Redis
+	err = a.cache.Set(fmt.Sprintf("access_token:%d", id), tokenPair.AccessToken, a.cfg.AccessTTL)
+	if err != nil {
+		return nil, shared.InternalError // Тут ошибка, если Redis не может сохранить токен
+	}
+
+	// Проверяем сохранение refresh токена в БД
+	err = a.refreshRepo.SetRefreshToken(id, tokenPair.RefreshToken, time.Now().Add(a.cfg.RefreshTTL))
+	if err != nil {
+		return nil, shared.InternalError // Ошибка, если не удается сохранить refresh токен в БД
+	}
+
+	return tokenPair, nil
 }
 
 func (a authService) Register(r UserRequest) *shared.HttpError {
@@ -55,55 +80,54 @@ func (a authService) Register(r UserRequest) *shared.HttpError {
 	return nil
 }
 
-func (a authService) Authenticate(r UserRequest) (string, string, *shared.HttpError) {
+func (a authService) Authenticate(r UserRequest) (*shared.TokenPair, *shared.HttpError) {
 	user, err := a.userRepo.FindByEmail(r.Email)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return "", "", shared.NewHttpError("user doesnt exits", http.StatusNotFound)
+			return nil, shared.NewHttpError("user doesnt exits", http.StatusNotFound)
 		}
-		return "", "", shared.InternalError
+		return nil, shared.InternalError
 	}
 
 	err = lib.ComparePasswords(user.Password, r.Password)
 	if err != nil {
-		return "", "", shared.NewHttpError("invalid credentials", http.StatusUnauthorized)
+		return nil, shared.InvalidCredentials
 	}
 
-	access, refresh, err := lib.GenerateTokenPair(user.ID, a.cfg.AccessTTL, a.cfg.AccessSecret)
-	if err != nil {
-		return "", "", shared.InternalError
+	tokenPair, hErr := a.generateAndStoreTokens(user.ID)
+	if hErr != nil {
+		return tokenPair, shared.InternalError
 	}
 
-	err = a.refreshRepo.SetRefreshToken(user.ID, refresh, time.Now().Add(a.cfg.RefreshTTL))
-	if err != nil {
-		return "", "", shared.InternalError
-	}
-
-	return access, refresh, nil
+	return tokenPair, nil
 }
 
-func (a authService) Refresh(r RefreshRequest) (string, string, *shared.HttpError) {
+func (a authService) Refresh(r RefreshRequest) (*shared.TokenPair, *shared.HttpError) {
 	userID, err := a.refreshRepo.GetUserIDIfValid(r.Refresh)
 	if err != nil {
-		return "", "", shared.NewHttpError(err.Error(), http.StatusUnauthorized)
+		return nil, shared.NewHttpError(err.Error(), http.StatusUnauthorized)
 	}
 
-	access, newRefresh, err := lib.GenerateTokenPair(userID, a.cfg.AccessTTL, a.cfg.AccessSecret)
-	if err != nil {
-		return "", "", shared.InternalError
+	tokenPair, hErr := a.generateAndStoreTokens(userID)
+	if hErr != nil {
+		return nil, shared.InternalError
 	}
 
-	err = a.refreshRepo.UpdateRefreshToken(userID, newRefresh, time.Now().Add(a.cfg.RefreshTTL))
-	if err != nil {
-		return "", "", shared.InternalError
-	}
-
-	return access, newRefresh, nil
+	return tokenPair, nil
 }
 
 func (a authService) Revoke(r RefreshRequest) *shared.HttpError {
-	err := a.refreshRepo.RevokeRefreshToken(r.Refresh)
+	userID, err := a.refreshRepo.GetUserIDIfValid(r.Refresh)
+	if err != nil {
+		return shared.NewHttpError(err.Error(), http.StatusUnauthorized)
+	}
 
+	err = a.refreshRepo.RevokeRefreshToken(r.Refresh)
+	if err != nil {
+		return shared.InternalError
+	}
+
+	err = a.cache.Delete(fmt.Sprintf("access_token:%d", userID))
 	if err != nil {
 		return shared.InternalError
 	}

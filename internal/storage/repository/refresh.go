@@ -8,19 +8,18 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-type RefreshTokenRepository interface {
+type RefreshTokenService interface {
 	SetRefreshToken(userID uint, token string, expiresAt time.Time) error
 	FindByUserID(userID uint) (*RefreshToken, error)
 	GetUserIDIfValid(token string) (uint, error)
 	RevokeRefreshToken(token string) error
-	UpdateRefreshToken(userID uint, token string, expiresAt time.Time) error
 }
 
 type refreshTokenPostgresRepo struct {
 	db *gorm.DB
 }
 
-func NewPostgresRefreshTokenRepo(db *gorm.DB) RefreshTokenRepository {
+func NewPostgresRefreshtokenService(db *gorm.DB) RefreshTokenService {
 	return refreshTokenPostgresRepo{db: db}
 }
 
@@ -29,12 +28,13 @@ func (repo refreshTokenPostgresRepo) SetRefreshToken(userID uint, token string, 
 		UserID:    userID,
 		Token:     token,
 		ExpiresAt: expiresAt,
+		Revoked:   false,
 	}
 
 	// Выполняем upsert: если запись существует, обновляем её, если нет — создаём
 	if err := repo.db.Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "user_id"}},                        // Указываем, по какому столбцу проверяется уникальность
-		DoUpdates: clause.AssignmentColumns([]string{"token", "expires_at"}), // Обновляем указанные столбцы
+		Columns:   []clause.Column{{Name: "user_id"}},                                   // Указываем, по какому столбцу проверяется уникальность
+		DoUpdates: clause.AssignmentColumns([]string{"token", "expires_at", "revoked"}), // Обновляем указанные столбцы
 	}).Create(&refreshToken).Error; err != nil {
 		return err
 	}
