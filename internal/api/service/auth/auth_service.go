@@ -37,19 +37,18 @@ func NewAuthService(userRepo r.UserRepository, refreshRepo r.RefreshTokenService
 func (a authService) generateAndStoreTokens(id uint) (*shared.TokenPair, *shared.HttpError) {
 	tokenPair, err := a.tokenService.GenerateTokenPair(id)
 	if err != nil {
-		return nil, shared.InternalError // Тут ошибка, если токены не могут быть сгенерированы
+		return nil, shared.InternalError
 	}
 
 	// Проверяем установку access токена в Redis
 	err = a.cache.Set(fmt.Sprintf("access_token:%d", id), tokenPair.AccessToken, a.cfg.AccessTTL)
 	if err != nil {
-		return nil, shared.InternalError // Тут ошибка, если Redis не может сохранить токен
+		return nil, shared.InternalError
 	}
 
-	// Проверяем сохранение refresh токена в БД
 	err = a.refreshRepo.SetRefreshToken(id, tokenPair.RefreshToken, time.Now().Add(a.cfg.RefreshTTL))
 	if err != nil {
-		return nil, shared.InternalError // Ошибка, если не удается сохранить refresh токен в БД
+		return nil, shared.InternalError
 	}
 
 	return tokenPair, nil

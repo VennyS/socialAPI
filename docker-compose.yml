@@ -5,29 +5,58 @@ services:
     image: redis:latest
     container_name: redis
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT}:6379"
     networks:
       - mynetwork
     restart: always
-
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}  # передаем пароль как переменную окружения
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD}"]  # передаем пароль через команду
   db:
     image: postgres:15
+    container_name: db
     restart: always
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: socialdb
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
     networks:
       - mynetwork
     ports:
-      - "5433:5432"
+      - "${DB_PORT}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+  app:
+    build: .
+    container_name: go-app
+    depends_on:
+      - db
+      - redis
+    ports:
+      - "${ADDR}:8080"
+    environment:
+      - ADDR=${ADDR}
+      - ACCESS_TTL=${ACCESS_TTL}
+      - REFRESH_TTL=${REFRESH_TTL}
+      - ACCESS_SECRET=${ACCESS_SECRET}
+      - DB_HOST=db
+      - DB_PORT=${DB_PORT}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME}
+      - DB_SSLMODE=${DB_SSLMODE}
+      - REDIS_HOST=redis
+      - REDIS_PORT=${REDIS_PORT}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - REDIS_DB=${REDIS_DB}
+    env_file:
+      - .env
+    networks:
+      - mynetwork
 
 volumes:
   postgres_data:
 
-  
 networks:
   mynetwork:
     driver: bridge

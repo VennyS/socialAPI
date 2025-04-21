@@ -18,7 +18,7 @@ func NewAuthController(authService auth.AuthService, tokenService shared.TokenSe
 }
 
 func (a AuthController) RegisterRoutes(r *chi.Mux) {
-	r.Route("v1/auth", func(r chi.Router) {
+	r.Route("/v1/auth", func(r chi.Router) {
 		r.With(api.JsonBodyMiddleware[auth.UserRequest]()).Post("/login", a.LoginHandler())
 		r.With(api.JsonBodyMiddleware[auth.UserRequest]()).Post("/register", a.RegisterHandler())
 		r.With(api.JsonBodyMiddleware[auth.RefreshRequest]()).Post("/refresh", a.RefreshHandler())
