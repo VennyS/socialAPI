@@ -119,7 +119,7 @@ func (a authService) Refresh(r RefreshRequest) (*shared.TokenPair, *shared.HttpE
 func (a authService) Revoke(r RefreshRequest) *shared.HttpError {
 	userID, err := a.refreshRepo.GetUserIDIfValid(r.Refresh)
 	if err != nil {
-		return shared.NewHttpError("invalid or expired refresh token", http.StatusUnauthorized)
+		return shared.NewHttpError(err.Error(), http.StatusUnauthorized)
 	}
 
 	err = a.refreshRepo.RevokeRefreshToken(r.Refresh)

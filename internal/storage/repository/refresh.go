@@ -28,12 +28,13 @@ func (repo refreshTokenPostgresRepo) SetRefreshToken(userID uint, token string, 
 		UserID:    userID,
 		Token:     token,
 		ExpiresAt: expiresAt,
+		Revoked:   false,
 	}
 
 	// Выполняем upsert: если запись существует, обновляем её, если нет — создаём
 	if err := repo.db.Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "user_id"}},                        // Указываем, по какому столбцу проверяется уникальность
-		DoUpdates: clause.AssignmentColumns([]string{"token", "expires_at"}), // Обновляем указанные столбцы
+		Columns:   []clause.Column{{Name: "user_id"}},                                   // Указываем, по какому столбцу проверяется уникальность
+		DoUpdates: clause.AssignmentColumns([]string{"token", "expires_at", "revoked"}), // Обновляем указанные столбцы
 	}).Create(&refreshToken).Error; err != nil {
 		return err
 	}
