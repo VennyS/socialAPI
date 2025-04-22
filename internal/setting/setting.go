@@ -5,6 +5,8 @@ import (
 	au "socialAPI/internal/api/auth"
 	srv "socialAPI/internal/api/service"
 	"socialAPI/internal/api/service/auth"
+	uServ "socialAPI/internal/api/service/user"
+	"socialAPI/internal/api/user"
 	"socialAPI/internal/lib"
 	"socialAPI/internal/setting/cfg"
 	"socialAPI/internal/shared"
@@ -36,7 +38,7 @@ func (a *App) LoadConfig() {
 		},
 		DB: cfg.DBConfig{
 			Host:     lib.GetStringFromEnv("DB_HOST", "localhost"),
-			Port:     lib.GetStringFromEnv("DB_PORT", "5433"),
+			Port:     lib.GetStringFromEnv("DB_PORT", "5432"),
 			User:     lib.GetStringFromEnv("DB_USER", "postgres"),
 			Password: lib.GetStringFromEnv("DB_PASSWORD", "postgres"),
 			Name:     lib.GetStringFromEnv("DB_NAME", "socialdb"),
@@ -79,14 +81,17 @@ func (a *App) MountServices() {
 	postgresRepo := repository.NewPostgresRepo(a.db)
 	tokenService := shared.NewTokenService(a.cfg.Auth.AccessSecret, a.cfg.Auth.AccessTTL)
 	authService := auth.NewAuthService(postgresRepo.Users(), postgresRepo.RefreshTokens(), a.cfg.Auth, a.cache, *tokenService)
+	userService := uServ.NewUserService(postgresRepo.Users())
 
-	a.service = srv.NewService(authService, *tokenService)
+	a.service = srv.NewService(authService, *tokenService, userService)
 }
 
 func (a App) MountRouter() *chi.Mux {
 	authController := au.NewAuthController(a.service.Auth(), a.service.Token())
+	userController := user.NewAuthController(a.service.User(), a.service.Token())
 	r := chi.NewRouter()
 	authController.RegisterRoutes(r)
+	userController.RegisterRoutes(r)
 
 	return r
 }
