@@ -13,6 +13,7 @@ type FriendshipRepository interface {
 	SendRequest(friendship *Friendship) error
 	GetAllFriends(userID uint) ([]*FriendWithID, error)
 	SetStatus(friendshipID uint, status FriendshipStatus) error
+	Exists(senderID, receiverID uint) (bool, error)
 }
 
 type friendshipPostgresRepo struct {
@@ -79,4 +80,19 @@ func (repo friendshipPostgresRepo) SetStatus(friendshipID uint, status Friendshi
 	}
 
 	return nil
+}
+
+func (repo friendshipPostgresRepo) Exists(senderID, receiverID uint) (bool, error) {
+	var count int64
+	err := repo.db.Model(&Friendship{}).
+		Where(
+			"(sender_id = ? AND receiver_id = ?) OR (sender_id = ? AND receiver_id = ?)",
+			senderID, receiverID, receiverID, senderID,
+		).Count(&count).Error
+
+	if err != nil {
+		return false, err
+	}
+
+	return count > 0, nil
 }

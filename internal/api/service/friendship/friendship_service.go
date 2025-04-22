@@ -29,14 +29,20 @@ func (f friendshipService) SendFriendRequest(senderID, receiverID uint) *shared.
 		return shared.NewHttpError("Cannot send friend request to yourself", http.StatusBadRequest)
 	}
 
+	exists, err := f.friendshipRepo.Exists(senderID, receiverID)
+
+	if exists {
+		return shared.NewHttpError("friendship exists", http.StatusConflict)
+	}
+
+	if err != nil {
+		return shared.InternalError
+	}
+
 	friendShip := r.Friendship{SenderID: senderID, ReceiverID: receiverID, Status: r.StatusPending}
 
-	err := f.friendshipRepo.SendRequest(&friendShip)
+	err = f.friendshipRepo.SendRequest(&friendShip)
 	if err != nil {
-		if errors.Is(err, gorm.ErrDuplicatedKey) {
-			return shared.NewHttpError("friendship already exitst", http.StatusConflict)
-		}
-
 		return shared.InternalError
 	}
 
