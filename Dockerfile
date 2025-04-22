@@ -1,31 +1,34 @@
-# Строим на основе golang:1.24-alpine
+# ─────────────────────────────────────
+# 🔨 Сборочный этап
+# ─────────────────────────────────────
 FROM golang:1.24-alpine AS builder
 
-# Устанавливаем рабочую директорию
 WORKDIR /app
 
-# Копируем файлы go.mod и go.sum для загрузки зависимостей
 COPY go.mod go.sum ./
-
-# Загружаем все зависимости
 RUN go mod download
 
-# Копируем все исходные файлы Go в рабочую директорию
 COPY . .
 
-# Строим приложение
 RUN go build -o app ./cmd
 
-# Минимальный образ для запуска
+# ─────────────────────────────────────
+# 🚀 Минимальный запускной образ с dockerize
+# ─────────────────────────────────────
 FROM alpine:latest
 
 WORKDIR /root/
 
-# Копируем скомпилированный файл из builder
+# Установка dockerize
+ADD https://github.com/jwilder/dockerize/releases/download/v0.6.1/dockerize-linux-amd64-v0.6.1.tar.gz /tmp/
+RUN tar -C /usr/local/bin -xzvf /tmp/dockerize-linux-amd64-v0.6.1.tar.gz && \
+    rm /tmp/dockerize-linux-amd64-v0.6.1.tar.gz
+
+# Копируем скомпилированное приложение
 COPY --from=builder /app/app .
 
-# Копируем .env файл
+# Копируем переменные окружения
 COPY .env .env
 
-# Запускаем приложение
-CMD ["./app"]
+# Запуск с ожиданием db и redis
+CMD ["dockerize", "-wait", "tcp://db:5432", "-wait", "tcp://redis:6379", "-timeout", "30s", "./app", "-migrate"]
