@@ -33,7 +33,7 @@ func (f FriendshipController) SendRequestHandler() http.HandlerFunc {
 	}
 }
 
-func (f FriendshipController) GetFriends() http.HandlerFunc {
+func (f FriendshipController) GetFriendsHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		senderID := r.Context().Value(api.UserIDKey).(uint)
 

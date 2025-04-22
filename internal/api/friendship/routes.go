@@ -20,6 +20,6 @@ func NewFriendshipController(friendshipService friendship.FriendshipService, tok
 func (f FriendshipController) RegisterRoutes(r *chi.Mux) {
 	r.Route("/v1/friendship", func(r chi.Router) {
 		r.With(api.AuthMiddleware(&f.tokenService)).Post("/{id}", f.SendRequestHandler())
-		r.With(api.AuthMiddleware(&f.tokenService)).Get("/", f.GetFriends())
+		r.With(api.AuthMiddleware(&f.tokenService)).Get("/", f.GetFriendsHandler())
 	})
 }

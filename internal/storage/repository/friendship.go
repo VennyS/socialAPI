@@ -1,10 +1,17 @@
 package repository
 
-import "gorm.io/gorm"
+import (
+	"gorm.io/gorm"
+)
+
+type FriendWithID struct {
+	Friend       *User `json:"friend"`
+	FriendshipID uint  `json:"friendship_id"`
+}
 
 type FriendshipRepository interface {
 	SendRequest(friendship *Friendship) error
-	GetAllFriends(userID uint) ([]*User, error)
+	GetAllFriends(userID uint) ([]*FriendWithID, error)
 }
 
 type friendshipPostgresRepo struct {
@@ -23,7 +30,7 @@ func (repo friendshipPostgresRepo) SendRequest(friendship *Friendship) error {
 	return nil
 }
 
-func (repo friendshipPostgresRepo) GetAllFriends(userID uint) ([]*User, error) {
+func (repo friendshipPostgresRepo) GetAllFriends(userID uint) ([]*FriendWithID, error) {
 	var friendships []Friendship
 
 	// Получаем все дружбы, где userID участвует и статус accepted
@@ -34,13 +41,23 @@ func (repo friendshipPostgresRepo) GetAllFriends(userID uint) ([]*User, error) {
 		return nil, err
 	}
 
-	friends := []*User{}
+	var friends []*FriendWithID
 	for _, f := range friendships {
+		var friend *User
+		var friendshipID uint
+
 		if f.SenderID == userID {
-			friends = append(friends, &f.Receiver)
+			friend = &f.Receiver
 		} else {
-			friends = append(friends, &f.Sender)
+			friend = &f.Sender
 		}
+
+		friendshipID = f.ID // ID дружбы
+
+		friends = append(friends, &FriendWithID{
+			Friend:       friend,
+			FriendshipID: friendshipID,
+		})
 	}
 
 	return friends, nil
