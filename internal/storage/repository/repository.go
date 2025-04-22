@@ -5,6 +5,7 @@ import "gorm.io/gorm"
 type Repository interface {
 	Users() UserRepository
 	RefreshTokens() RefreshTokenService
+	Friendship() FriendshipRepository
 	// Chats() ChatRepository
 	// Messages() MessageRepository
 	// Notifications() NotificationRepository
@@ -13,6 +14,7 @@ type Repository interface {
 type postgresRepo struct {
 	users         UserRepository
 	refreshTokens RefreshTokenService
+	friendship    FriendshipRepository
 	// chats         ChatRepository
 	// messages      MessageRepository
 	// notifications NotificationRepository
@@ -22,6 +24,7 @@ func NewPostgresRepo(db *gorm.DB) Repository {
 	return &postgresRepo{
 		users:         NewPostgresUserRepo(db),
 		refreshTokens: NewPostgresRefreshtokenService(db),
+		friendship:    NewPostgresFriendshipRepo(db),
 		// chats:         NewPostgresChatRepo(db),
 		// messages:      NewPostgresMessageRepo(db),
 		// notifications: NewPostgresNotificationRepo(db),
@@ -34,6 +37,10 @@ func (r *postgresRepo) Users() UserRepository {
 
 func (r *postgresRepo) RefreshTokens() RefreshTokenService {
 	return r.refreshTokens
+}
+
+func (r *postgresRepo) Friendship() FriendshipRepository {
+	return r.friendship
 }
 
 // func (r *PostgresRepo) Chats() ChatRepository {
