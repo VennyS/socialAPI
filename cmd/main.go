@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"net/http"
+	"socialAPI/internal/lib"
 	"socialAPI/internal/setting"
 )
 
@@ -11,6 +12,7 @@ func main() {
 	flag.BoolVar(&migrations, "migrate", false, "Run migrations")
 	flag.Parse()
 
+	lib.InitValidator()
 	app := setting.App{}
 	app.LoadConfig()
 	app.InitStorages(migrations)
