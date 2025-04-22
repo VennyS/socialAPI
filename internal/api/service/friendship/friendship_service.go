@@ -10,7 +10,8 @@ import (
 )
 
 type FriendshipService interface {
-	SendFriendRequst(senderID, receiverID uint) *shared.HttpError
+	SendFriendRequest(senderID, receiverID uint) *shared.HttpError
+	GetAllFriends(senderID uint) ([]*r.User, *shared.HttpError)
 	// GetAllPendingRequest(receiverID uint)
 }
 
@@ -22,7 +23,7 @@ func NewFriendshipService(friendshipRepo r.FriendshipRepository) FriendshipServi
 	return &friendshipService{friendshipRepo: friendshipRepo}
 }
 
-func (f friendshipService) SendFriendRequst(senderID, receiverID uint) *shared.HttpError {
+func (f friendshipService) SendFriendRequest(senderID, receiverID uint) *shared.HttpError {
 	if senderID == receiverID {
 		return shared.NewHttpError("Cannot send friend request to yourself", http.StatusBadRequest)
 	}
@@ -39,4 +40,14 @@ func (f friendshipService) SendFriendRequst(senderID, receiverID uint) *shared.H
 	}
 
 	return nil
+}
+
+func (f friendshipService) GetAllFriends(senderID uint) ([]*r.User, *shared.HttpError) {
+	users, err := f.friendshipRepo.GetAllFriends(senderID)
+
+	if err != nil {
+		return nil, shared.InternalError
+	}
+
+	return users, nil
 }

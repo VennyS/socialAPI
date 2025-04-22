@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/render"
 )
 
 func (f FriendshipController) SendRequestHandler() http.HandlerFunc {
@@ -22,12 +23,26 @@ func (f FriendshipController) SendRequestHandler() http.HandlerFunc {
 
 		senderID := r.Context().Value(api.UserIDKey).(uint)
 
-		hErr := f.friendshipService.SendFriendRequst(senderID, receiverID)
+		hErr := f.friendshipService.SendFriendRequest(senderID, receiverID)
 		if hErr != nil {
 			lib.SendMessage(w, r, hErr.StatusCode, hErr.Error())
 			return
 		}
 
 		lib.SendMessage(w, r, http.StatusOK, "sent succefully")
+	}
+}
+
+func (f FriendshipController) GetFriends() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		senderID := r.Context().Value(api.UserIDKey).(uint)
+
+		users, err := f.friendshipService.GetAllFriends(senderID)
+		if err != nil {
+			lib.SendMessage(w, r, err.StatusCode, err.Error())
+		}
+
+		render.Status(r, http.StatusOK)
+		render.JSON(w, r, users)
 	}
 }
