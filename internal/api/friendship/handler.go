@@ -3,6 +3,7 @@ package friendship
 import (
 	"net/http"
 	"socialAPI/internal/api"
+	"socialAPI/internal/api/service/friendship"
 	"socialAPI/internal/lib"
 	"strconv"
 
@@ -44,5 +45,27 @@ func (f FriendshipController) GetFriendsHandler() http.HandlerFunc {
 
 		render.Status(r, http.StatusOK)
 		render.JSON(w, r, users)
+	}
+}
+
+func (f FriendshipController) PutStatusHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		chatIDParam := chi.URLParam(r, "id")
+
+		chatIDUint64, err := strconv.ParseUint(chatIDParam, 10, 32)
+		if err != nil {
+			lib.SendMessage(w, r, http.StatusBadRequest, "Invalid id parameter")
+			return
+		}
+		chatID := uint(chatIDUint64)
+
+		req := r.Context().Value(api.DataKey).(friendship.ChangeStatusRequest)
+
+		hErr := f.friendshipService.PatchFriendship(chatID, req)
+		if hErr != nil {
+			lib.SendMessage(w, r, hErr.StatusCode, hErr.Error())
+		}
+
+		lib.SendMessage(w, r, http.StatusOK, "changed succefully")
 	}
 }

@@ -12,6 +12,7 @@ type FriendWithID struct {
 type FriendshipRepository interface {
 	SendRequest(friendship *Friendship) error
 	GetAllFriends(userID uint) ([]*FriendWithID, error)
+	SetStatus(friendshipID uint, status FriendshipStatus) error
 }
 
 type friendshipPostgresRepo struct {
@@ -61,4 +62,21 @@ func (repo friendshipPostgresRepo) GetAllFriends(userID uint) ([]*FriendWithID, 
 	}
 
 	return friends, nil
+}
+
+func (repo friendshipPostgresRepo) SetStatus(friendshipID uint, status FriendshipStatus) error {
+	// Загружаем заявку, чтобы убедиться, что userID действительно получатель
+	var friendship Friendship
+	err := repo.db.First(&friendship, "id = ?", friendshipID).Error
+	if err != nil {
+		return err
+	}
+
+	// Обновляем статус
+	err = repo.db.Model(&friendship).Update("status", status).Error
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

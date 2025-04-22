@@ -12,6 +12,7 @@ import (
 type FriendshipService interface {
 	SendFriendRequest(senderID, receiverID uint) *shared.HttpError
 	GetAllFriends(senderID uint) ([]*r.FriendWithID, *shared.HttpError)
+	PatchFriendship(friendshipID uint, request ChangeStatusRequest) *shared.HttpError
 	// GetAllPendingRequest(receiverID uint)
 }
 
@@ -50,4 +51,17 @@ func (f friendshipService) GetAllFriends(senderID uint) ([]*r.FriendWithID, *sha
 	}
 
 	return users, nil
+}
+
+func (f friendshipService) PatchFriendship(friendshipID uint, request ChangeStatusRequest) *shared.HttpError {
+	err := f.friendshipRepo.SetStatus(friendshipID, request.Status)
+
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return shared.NewHttpError("Friend request not found or not yours", http.StatusNotFound)
+		}
+		return shared.InternalError
+	}
+
+	return nil
 }
