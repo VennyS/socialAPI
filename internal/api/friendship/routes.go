@@ -19,7 +19,7 @@ func NewFriendshipController(friendshipService friendship.FriendshipService, tok
 
 func (f FriendshipController) RegisterRoutes(r *chi.Mux) {
 	r.Route("/v1/friendship", func(r chi.Router) {
-		r.With(api.AuthMiddleware(&f.tokenService)).Post("/{id}", f.SendRequestHandler())
+		r.With(api.AuthMiddleware(&f.tokenService), api.JsonBodyMiddleware[friendship.FriendshipPostRequest]()).Post("/", f.SendRequestHandler())
 		r.With(api.AuthMiddleware(&f.tokenService)).Get("/", f.GetFriendsHandler())
 		r.With(api.AuthMiddleware(&f.tokenService), api.JsonBodyMiddleware[friendship.ChangeStatusRequest]()).Patch("/{id}", f.PutStatusHandler())
 	})
