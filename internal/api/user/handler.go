@@ -2,28 +2,31 @@ package user
 
 import (
 	"net/http"
+	"socialAPI/internal/api"
 	"socialAPI/internal/lib"
-	"strconv"
 
 	"github.com/go-chi/render"
 )
 
 func (c UserController) GetAllHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// Получаем параметр excludeID из строки запроса (например, /users?excludeID=3)
-		excludeIDParam := r.URL.Query().Get("excludeID")
+		// Получаем параметр excludeMe из строки запроса (например, /users?excludeMe=true)
+		excludeMe := r.URL.Query().Get("excludeMe")
 
+		// Флаг для исключения пользователя из выборки
 		var excludeID *uint
-		if excludeIDParam != "" {
-			// Преобразуем excludeIDParam в uint
-			id, err := strconv.Atoi(excludeIDParam)
-			if err != nil {
-				lib.SendMessage(w, r, http.StatusBadRequest, "Invalid excludeID parameter")
+
+		// Если excludeMe равно "true", исключаем текущего пользователя
+		if excludeMe == "true" {
+			// Извлекаем userID из контекста (считаем, что userID установлен в контексте с помощью авторизации)
+			userID, ok := r.Context().Value(api.UserIDKey).(uint)
+			if !ok {
+				lib.SendMessage(w, r, http.StatusUnauthorized, "User ID not found in context")
 				return
 			}
-			// Преобразуем в указатель
-			idUint := uint(id)
-			excludeID = &idUint
+
+			// Преобразуем ID в указатель
+			excludeID = &userID
 		}
 
 		// Теперь передаем excludeID в сервис
