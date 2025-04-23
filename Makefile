@@ -1,4 +1,4 @@
-.PHONY: run, migrate, docker, docker-down
+.PHONY: run, migrate, docker, docker-down, build
 
 run:
 	go run cmd/main.go
@@ -11,3 +11,6 @@ docker:
 
 docker-down:
 	docker compose down
+
+build:
+	docker-compose up --build
