@@ -70,7 +70,7 @@ func (a *App) SetupLogger() {
 func (a *App) InitStorages(madeMigrations bool) {
 	dsn := fmt.Sprintf(
 		"host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
-		"куцку",
+		a.cfg.DB.Host,
 		a.cfg.DB.Port,
 		a.cfg.DB.User,
 		a.cfg.DB.Password,
@@ -102,9 +102,9 @@ func (a *App) MountServices() {
 	postgresRepo := repository.NewPostgresRepo(a.db)
 
 	tokenService := shared.NewTokenService(a.cfg.Auth.AccessSecret, a.cfg.Auth.AccessTTL)
-	authService := auth.NewAuthService(postgresRepo.Users(), postgresRepo.RefreshTokens(), a.cfg.Auth, a.cache, *tokenService)
-	userService := uSrv.NewUserService(postgresRepo.Users())
-	friendshipService := frSrv.NewFriendshipService(postgresRepo.Friendship())
+	authService := auth.NewAuthService(postgresRepo.Users(), postgresRepo.RefreshTokens(), a.cfg.Auth, a.cache, *tokenService, a.logger)
+	userService := uSrv.NewUserService(postgresRepo.Users(), a.logger)
+	friendshipService := frSrv.NewFriendshipService(postgresRepo.Friendship(), a.logger)
 
 	a.service = srv.NewService(authService, *tokenService, userService, friendshipService)
 }
