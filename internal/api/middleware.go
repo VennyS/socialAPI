@@ -57,7 +57,7 @@ func JsonBodyMiddleware[T any]() func(http.Handler) http.Handler {
 				return
 			}
 
-			if err := l.Validate.Struct(body); err != nil {
+			if err := shared.Validate.Struct(body); err != nil {
 				l.SendMessage(w, r, http.StatusBadRequest, err.Error())
 				return
 			}
