@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
@@ -26,10 +27,12 @@ type App struct {
 	db      *gorm.DB
 	service srv.Service
 	cache   cache.CacheStore
+	logger  *zap.SugaredLogger
 }
 
 func (a *App) LoadConfig() {
 	a.cfg = cfg.Config{
+		AppEnv: lib.GetStringFromEnv("APP_ENV", "development"),
 		Server: cfg.ServerConfig{
 			Addr: lib.GetStringFromEnv("ADDR", ":8080"),
 		},
@@ -55,6 +58,15 @@ func (a *App) LoadConfig() {
 	}
 }
 
+func (a *App) SetupLogger() {
+	var err error
+	a.logger, err = shared.InitLogger(a.cfg.AppEnv)
+
+	if err != nil {
+		panic(fmt.Sprintf("Failed to initialize logger: %v", err))
+	}
+}
+
 func (a *App) InitStorages(madeMigrations bool) {
 	dsn := fmt.Sprintf(
 		"host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
@@ -66,14 +78,21 @@ func (a *App) InitStorages(madeMigrations bool) {
 		a.cfg.DB.SSLMode,
 	)
 
-	a.db = storage.BootstrapDatabase(dsn)
+	var err error
+	a.db, err = storage.BootstrapDatabase(dsn)
 	if madeMigrations {
 		storage.MadeMigrations(a.db)
 	}
 
+	if err != nil {
+		a.logger.Panicw("Failed to initialize database", "error", err)
+		return
+	}
+
 	redis, err := cache.NewRedis(a.cfg.Redis)
 	if err != nil {
-		panic(fmt.Sprintf("Failed to initialize Redis: %v", err))
+		a.logger.Panicw("Failed to initialize Redis", "error", err)
+		return
 	}
 
 	a.cache = redis
@@ -81,19 +100,22 @@ func (a *App) InitStorages(madeMigrations bool) {
 
 func (a *App) MountServices() {
 	postgresRepo := repository.NewPostgresRepo(a.db)
+
 	tokenService := shared.NewTokenService(a.cfg.Auth.AccessSecret, a.cfg.Auth.AccessTTL)
-	authService := auth.NewAuthService(postgresRepo.Users(), postgresRepo.RefreshTokens(), a.cfg.Auth, a.cache, *tokenService)
-	userService := uSrv.NewUserService(postgresRepo.Users())
-	friendshipService := frSrv.NewFriendshipService(postgresRepo.Friendship())
+	authService := auth.NewAuthService(postgresRepo.Users(), postgresRepo.RefreshTokens(), a.cfg.Auth, a.cache, *tokenService, a.logger)
+	userService := uSrv.NewUserService(postgresRepo.Users(), a.logger)
+	friendshipService := frSrv.NewFriendshipService(postgresRepo.Friendship(), a.logger)
 
 	a.service = srv.NewService(authService, *tokenService, userService, friendshipService)
 }
 
 func (a App) MountRouter() *chi.Mux {
-	authController := au.NewAuthController(a.service.Auth(), a.service.Token())
-	userController := user.NewAuthController(a.service.User(), a.service.Token())
-	friendshipController := friendship.NewFriendshipController(a.service.Friendship(), a.service.Token())
+	authController := au.NewAuthController(a.service.Auth(), a.service.Token(), a.logger)
+	userController := user.NewAuthController(a.service.User(), a.service.Token(), a.logger)
+	friendshipController := friendship.NewFriendshipController(a.service.Friendship(), a.service.Token(), a.logger)
+
 	r := chi.NewRouter()
+
 	authController.RegisterRoutes(r)
 	userController.RegisterRoutes(r)
 	friendshipController.RegisterRoutes(r)

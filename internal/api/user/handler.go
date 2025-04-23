@@ -10,33 +10,32 @@ import (
 
 func (c UserController) GetAllHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// Получаем параметр excludeMe из строки запроса (например, /users?excludeMe=true)
 		excludeMe := r.URL.Query().Get("excludeMe")
 
-		// Флаг для исключения пользователя из выборки
 		var excludeID *uint
 
-		// Если excludeMe равно "true", исключаем текущего пользователя
 		if excludeMe == "true" {
-			// Извлекаем userID из контекста (считаем, что userID установлен в контексте с помощью авторизации)
 			userID, ok := r.Context().Value(api.UserIDKey).(uint)
 			if !ok {
+				c.logger.Warnw("User ID not found in context", "error", "User ID not found")
 				lib.SendMessage(w, r, http.StatusUnauthorized, "User ID not found in context")
 				return
 			}
 
-			// Преобразуем ID в указатель
 			excludeID = &userID
 		}
 
-		// Теперь передаем excludeID в сервис
+		c.logger.Infow("Get all users request", "excludeMe", excludeMe, "excludeID", excludeID)
+
 		users, err := c.userService.GetAllUsers(excludeID)
 		if err != nil {
+			c.logger.Warnw("Failed to retrieve users", "error", err.Error())
 			lib.SendMessage(w, r, err.StatusCode, err.Error())
 			return
 		}
 
-		// Отправляем успешный ответ
+		c.logger.Infow("Successfully retrieved users")
+
 		render.Status(r, http.StatusOK)
 		render.JSON(w, r, users)
 	}

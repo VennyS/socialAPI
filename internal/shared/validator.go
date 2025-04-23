@@ -1,5 +1,5 @@
 // lib/validator.go
-package lib
+package shared
 
 import "github.com/go-playground/validator/v10"
 

@@ -16,13 +16,17 @@ func (f FriendshipController) SendRequestHandler() http.HandlerFunc {
 		req := r.Context().Value(api.DataKey).(friendship.FriendshipPostRequest)
 		senderID := r.Context().Value(api.UserIDKey).(uint)
 
+		f.logger.Infow("Send friend request", "senderID", senderID, "receiverID", req.ReceiverID)
+
 		hErr := f.friendshipService.SendFriendRequest(senderID, req.ReceiverID)
 		if hErr != nil {
+			f.logger.Warnw("Failed to send friend request", "senderID", senderID, "receiverID", req.ReceiverID, "error", hErr.Error())
 			lib.SendMessage(w, r, hErr.StatusCode, hErr.Error())
 			return
 		}
 
-		lib.SendMessage(w, r, http.StatusOK, "sent succefully")
+		f.logger.Infow("Friend request sent successfully", "senderID", senderID, "receiverID", req.ReceiverID)
+		lib.SendMessage(w, r, http.StatusOK, "sent successfully")
 	}
 }
 
@@ -31,12 +35,16 @@ func (f FriendshipController) GetFriendsHandler() http.HandlerFunc {
 		senderID := r.Context().Value(api.UserIDKey).(uint)
 		statusParam := r.URL.Query().Get("status")
 
+		f.logger.Infow("Get friends request", "senderID", senderID, "status", statusParam)
+
 		users, err := f.friendshipService.GetAllFriends(senderID, statusParam)
 		if err != nil {
+			f.logger.Warnw("Failed to retrieve friends", "senderID", senderID, "status", statusParam, "error", err.Error())
 			lib.SendMessage(w, r, err.StatusCode, err.Error())
 			return
 		}
 
+		f.logger.Infow("Successfully retrieved friends", "senderID", senderID, "status", statusParam)
 		render.Status(r, http.StatusOK)
 		render.JSON(w, r, users)
 	}
@@ -48,6 +56,7 @@ func (f FriendshipController) PutStatusHandler() http.HandlerFunc {
 
 		chatIDUint64, err := strconv.ParseUint(chatIDParam, 10, 32)
 		if err != nil {
+			f.logger.Warnw("Invalid chat ID parameter", "chatID", chatIDParam, "error", err.Error())
 			lib.SendMessage(w, r, http.StatusBadRequest, "Invalid id parameter")
 			return
 		}
@@ -55,11 +64,16 @@ func (f FriendshipController) PutStatusHandler() http.HandlerFunc {
 
 		req := r.Context().Value(api.DataKey).(friendship.ChangeStatusRequest)
 
+		f.logger.Infow("Change friendship status", "chatID", chatID, "status", req.Status)
+
 		hErr := f.friendshipService.PatchFriendship(chatID, req)
 		if hErr != nil {
+			f.logger.Warnw("Failed to change friendship status", "chatID", chatID, "error", hErr.Error())
 			lib.SendMessage(w, r, hErr.StatusCode, hErr.Error())
+			return
 		}
 
-		lib.SendMessage(w, r, http.StatusOK, "changed succefully")
+		f.logger.Infow("Friendship status changed successfully", "chatID", chatID, "status", req.Status)
+		lib.SendMessage(w, r, http.StatusOK, "changed successfully")
 	}
 }
