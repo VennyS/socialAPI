@@ -3,9 +3,11 @@ package setting
 import (
 	"fmt"
 	au "socialAPI/internal/api/auth"
+	"socialAPI/internal/api/friendship"
 	srv "socialAPI/internal/api/service"
 	"socialAPI/internal/api/service/auth"
-	uServ "socialAPI/internal/api/service/user"
+	frSrv "socialAPI/internal/api/service/friendship"
+	uSrv "socialAPI/internal/api/service/user"
 	"socialAPI/internal/api/user"
 	"socialAPI/internal/lib"
 	"socialAPI/internal/setting/cfg"
@@ -81,17 +83,20 @@ func (a *App) MountServices() {
 	postgresRepo := repository.NewPostgresRepo(a.db)
 	tokenService := shared.NewTokenService(a.cfg.Auth.AccessSecret, a.cfg.Auth.AccessTTL)
 	authService := auth.NewAuthService(postgresRepo.Users(), postgresRepo.RefreshTokens(), a.cfg.Auth, a.cache, *tokenService)
-	userService := uServ.NewUserService(postgresRepo.Users())
+	userService := uSrv.NewUserService(postgresRepo.Users())
+	friendshipService := frSrv.NewFriendshipService(postgresRepo.Friendship())
 
-	a.service = srv.NewService(authService, *tokenService, userService)
+	a.service = srv.NewService(authService, *tokenService, userService, friendshipService)
 }
 
 func (a App) MountRouter() *chi.Mux {
 	authController := au.NewAuthController(a.service.Auth(), a.service.Token())
 	userController := user.NewAuthController(a.service.User(), a.service.Token())
+	friendshipController := friendship.NewFriendshipController(a.service.Friendship(), a.service.Token())
 	r := chi.NewRouter()
 	authController.RegisterRoutes(r)
 	userController.RegisterRoutes(r)
+	friendshipController.RegisterRoutes(r)
 
 	return r
 }

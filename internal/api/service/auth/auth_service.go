@@ -54,6 +54,7 @@ func (a authService) generateAndStoreTokens(id uint) (*shared.TokenPair, *shared
 	return tokenPair, nil
 }
 
+// TODO: catch gorm.RecordNotFound error instead of made another sql query
 func (a authService) Register(r UserRequest) *shared.HttpError {
 	exists, err := a.userRepo.Exists(r.Email)
 	if err != nil {

@@ -1,0 +1,83 @@
+package friendship
+
+import (
+	"errors"
+	"net/http"
+	"socialAPI/internal/lib"
+	"socialAPI/internal/shared"
+	r "socialAPI/internal/storage/repository"
+
+	"gorm.io/gorm"
+)
+
+type FriendshipService interface {
+	SendFriendRequest(senderID, receiverID uint) *shared.HttpError
+	GetAllFriends(senderID uint, statusParam string) ([]*r.FriendWithID, *shared.HttpError)
+	PatchFriendship(friendshipID uint, request ChangeStatusRequest) *shared.HttpError
+	// GetAllPendingRequest(receiverID uint)
+}
+
+type friendshipService struct {
+	friendshipRepo r.FriendshipRepository
+}
+
+func NewFriendshipService(friendshipRepo r.FriendshipRepository) FriendshipService {
+	return &friendshipService{friendshipRepo: friendshipRepo}
+}
+
+func (f friendshipService) SendFriendRequest(senderID, receiverID uint) *shared.HttpError {
+	if senderID == receiverID {
+		return shared.NewHttpError("Cannot send friend request to yourself", http.StatusBadRequest)
+	}
+
+	exists, err := f.friendshipRepo.Exists(senderID, receiverID)
+
+	if exists {
+		return shared.NewHttpError("friendship exists", http.StatusConflict)
+	}
+
+	if err != nil {
+		return shared.InternalError
+	}
+
+	friendShip := r.Friendship{SenderID: senderID, ReceiverID: receiverID, Status: r.StatusPending}
+
+	err = f.friendshipRepo.SendRequest(&friendShip)
+	if err != nil {
+		return shared.InternalError
+	}
+
+	return nil
+}
+
+func (f friendshipService) GetAllFriends(senderID uint, statusParam string) ([]*r.FriendWithID, *shared.HttpError) {
+	var statusPtr *r.FriendshipStatus
+
+	if statusParam != "" {
+		status := r.FriendshipStatus(statusParam)
+		statusPtr = &status
+		if !lib.IsValidStatus(*statusPtr) {
+			return nil, shared.NewHttpError("incorrect status", http.StatusBadRequest)
+		}
+	}
+
+	users, err := f.friendshipRepo.GetAllFriends(senderID, statusPtr)
+	if err != nil {
+		return nil, shared.InternalError
+	}
+
+	return users, nil
+}
+
+func (f friendshipService) PatchFriendship(friendshipID uint, request ChangeStatusRequest) *shared.HttpError {
+	err := f.friendshipRepo.SetStatus(friendshipID, request.Status)
+
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return shared.NewHttpError("Friend request not found or not yours", http.StatusNotFound)
+		}
+		return shared.InternalError
+	}
+
+	return nil
+}

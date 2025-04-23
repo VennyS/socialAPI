@@ -7,8 +7,6 @@ import (
 	l "socialAPI/internal/lib"
 	"socialAPI/internal/shared"
 	"strings"
-
-	"github.com/go-playground/validator/v10"
 )
 
 type key string
@@ -59,9 +57,7 @@ func JsonBodyMiddleware[T any]() func(http.Handler) http.Handler {
 				return
 			}
 
-			validate := validator.New()
-
-			if err := validate.Struct(body); err != nil {
+			if err := l.Validate.Struct(body); err != nil {
 				l.SendMessage(w, r, http.StatusBadRequest, err.Error())
 				return
 			}
