@@ -3,6 +3,7 @@ package cfg
 import "time"
 
 type Config struct {
+	AppEnv string
 	Server ServerConfig
 	Auth   AuthConfig
 	DB     DBConfig

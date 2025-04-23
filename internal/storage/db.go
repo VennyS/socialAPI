@@ -5,17 +5,20 @@ import (
 	repo "socialAPI/internal/storage/repository"
 
 	"gorm.io/driver/postgres"
+	"gorm.io/gorm/logger"
 
 	"gorm.io/gorm"
 )
 
-func BootstrapDatabase(dsn string) *gorm.DB {
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+func BootstrapDatabase(dsn string) (*gorm.DB, error) {
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
+		Logger: logger.Default.LogMode(logger.Silent),
+	})
 	if err != nil {
-		panic(fmt.Sprintf("Error database connection: %v", err))
+		return nil, err
 	}
 
-	return db
+	return db, nil
 }
 
 func MadeMigrations(db *gorm.DB) {

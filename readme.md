@@ -32,6 +32,7 @@
 
     ```bash
     # App
+    APP_ENV="production" # OR DEVELOPMENT
     ADDR=":8080"
     ACCESS_TTL="15m"
     REFRESH_TTL="720h"
