@@ -3,6 +3,7 @@ package friendship
 import (
 	"errors"
 	"net/http"
+	"socialAPI/internal/lib"
 	"socialAPI/internal/shared"
 	r "socialAPI/internal/storage/repository"
 
@@ -11,7 +12,7 @@ import (
 
 type FriendshipService interface {
 	SendFriendRequest(senderID, receiverID uint) *shared.HttpError
-	GetAllFriends(senderID uint) ([]*r.FriendWithID, *shared.HttpError)
+	GetAllFriends(senderID uint, statusParam string) ([]*r.FriendWithID, *shared.HttpError)
 	PatchFriendship(friendshipID uint, request ChangeStatusRequest) *shared.HttpError
 	// GetAllPendingRequest(receiverID uint)
 }
@@ -49,9 +50,18 @@ func (f friendshipService) SendFriendRequest(senderID, receiverID uint) *shared.
 	return nil
 }
 
-func (f friendshipService) GetAllFriends(senderID uint) ([]*r.FriendWithID, *shared.HttpError) {
-	users, err := f.friendshipRepo.GetAllFriends(senderID)
+func (f friendshipService) GetAllFriends(senderID uint, statusParam string) ([]*r.FriendWithID, *shared.HttpError) {
+	var statusPtr *r.FriendshipStatus
 
+	if statusParam != "" {
+		status := r.FriendshipStatus(statusParam)
+		statusPtr = &status
+		if !lib.IsValidStatus(*statusPtr) {
+			return nil, shared.NewHttpError("incorrect status", http.StatusBadRequest)
+		}
+	}
+
+	users, err := f.friendshipRepo.GetAllFriends(senderID, statusPtr)
 	if err != nil {
 		return nil, shared.InternalError
 	}

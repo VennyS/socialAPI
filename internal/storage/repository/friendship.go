@@ -11,7 +11,7 @@ type FriendWithID struct {
 
 type FriendshipRepository interface {
 	SendRequest(friendship *Friendship) error
-	GetAllFriends(userID uint) ([]*FriendWithID, error)
+	GetAllFriends(userID uint, status *FriendshipStatus) ([]*FriendWithID, error)
 	SetStatus(friendshipID uint, status FriendshipStatus) error
 	Exists(senderID, receiverID uint) (bool, error)
 }
@@ -32,18 +32,25 @@ func (repo friendshipPostgresRepo) SendRequest(friendship *Friendship) error {
 	return nil
 }
 
-func (repo friendshipPostgresRepo) GetAllFriends(userID uint) ([]*FriendWithID, error) {
+func (repo friendshipPostgresRepo) GetAllFriends(userID uint, status *FriendshipStatus) ([]*FriendWithID, error) {
 	var friendships []Friendship
+
+	var queryStatus FriendshipStatus
+	if status == nil {
+		queryStatus = StatusFriendship
+	} else {
+		queryStatus = *status
+	}
 
 	// Получаем все дружбы, где userID участвует и статус accepted
 	err := repo.db.Preload("Sender").Preload("Receiver").
-		Where("(sender_id = ? OR receiver_id = ?) AND status = ?", userID, userID, StatusFriendship).
+		Where("(sender_id = ? OR receiver_id = ?) AND status = ?", userID, userID, queryStatus).
 		Find(&friendships).Error
 	if err != nil {
 		return nil, err
 	}
 
-	var friends []*FriendWithID
+	friends := []*FriendWithID{}
 	for _, f := range friendships {
 		var friend *User
 		var friendshipID uint

@@ -3,6 +3,7 @@ package lib
 import (
 	"fmt"
 	"net/http"
+	"socialAPI/internal/storage/repository"
 	"strings"
 
 	"github.com/go-chi/render"
@@ -37,4 +38,13 @@ func ValidateFields(fields map[string]string) error {
 func SendMessage(w http.ResponseWriter, r *http.Request, statusCode int, message string) {
 	render.Status(r, statusCode)
 	render.JSON(w, r, map[string]string{"message": message})
+}
+
+func IsValidStatus(status repository.FriendshipStatus) bool {
+	switch status {
+	case repository.StatusPending, repository.StatusRejected, repository.StatusFriendship:
+		return true
+	default:
+		return false
+	}
 }

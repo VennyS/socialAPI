@@ -29,10 +29,12 @@ func (f FriendshipController) SendRequestHandler() http.HandlerFunc {
 func (f FriendshipController) GetFriendsHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		senderID := r.Context().Value(api.UserIDKey).(uint)
+		statusParam := r.URL.Query().Get("status")
 
-		users, err := f.friendshipService.GetAllFriends(senderID)
+		users, err := f.friendshipService.GetAllFriends(senderID, statusParam)
 		if err != nil {
 			lib.SendMessage(w, r, err.StatusCode, err.Error())
+			return
 		}
 
 		render.Status(r, http.StatusOK)
