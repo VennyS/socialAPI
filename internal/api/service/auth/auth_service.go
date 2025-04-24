@@ -60,7 +60,7 @@ func (a authService) generateAndStoreTokens(id uint) (*shared.TokenPair, *shared
 }
 
 func (a authService) Register(r UserRequest) *shared.HttpError {
-	exists, err := a.userRepo.Exists(r.Email)
+	exists, err := a.userRepo.EmailExists(r.Email)
 	if err != nil {
 		a.logger.Errorw("Error checking if user exists", "email", r.Email, "error", err)
 		return shared.InternalError
