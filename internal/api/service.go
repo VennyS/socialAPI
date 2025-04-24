@@ -1,9 +1,10 @@
-package service
+package api
 
 import (
-	"socialAPI/internal/api/service/auth"
-	"socialAPI/internal/api/service/friendship"
-	"socialAPI/internal/api/service/user"
+	"socialAPI/internal/api/auth"
+	"socialAPI/internal/api/chat"
+	"socialAPI/internal/api/friendship"
+	"socialAPI/internal/api/user"
 	"socialAPI/internal/shared"
 )
 
@@ -12,6 +13,7 @@ type Service interface {
 	Token() shared.TokenService
 	User() user.UserService
 	Friendship() friendship.FriendshipService
+	Chat() chat.ChatService
 }
 
 type service struct {
@@ -19,10 +21,11 @@ type service struct {
 	token      shared.TokenService
 	user       user.UserService
 	friendship friendship.FriendshipService
+	chat       chat.ChatService
 }
 
-func NewService(a auth.AuthService, t shared.TokenService, u user.UserService, fr friendship.FriendshipService) Service {
-	return &service{auth: a, token: t, user: u, friendship: fr}
+func NewService(a auth.AuthService, t shared.TokenService, u user.UserService, fr friendship.FriendshipService, c chat.ChatService) Service {
+	return &service{auth: a, token: t, user: u, friendship: fr, chat: c}
 }
 
 func (s service) Auth() auth.AuthService {
@@ -39,4 +42,8 @@ func (s service) User() user.UserService {
 
 func (s service) Friendship() friendship.FriendshipService {
 	return s.friendship
+}
+
+func (s service) Chat() chat.ChatService {
+	return s.chat
 }

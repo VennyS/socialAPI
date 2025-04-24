@@ -1,8 +1,7 @@
 package auth
 
 import (
-	"socialAPI/internal/api"
-	"socialAPI/internal/api/service/auth"
+	"socialAPI/internal/api/middleware"
 	"socialAPI/internal/shared"
 
 	"github.com/go-chi/chi/v5"
@@ -10,20 +9,20 @@ import (
 )
 
 type AuthController struct {
-	authService  auth.AuthService
+	authService  AuthService
 	tokenService shared.TokenService
 	logger       *zap.SugaredLogger
 }
 
-func NewAuthController(authService auth.AuthService, tokenService shared.TokenService, logger *zap.SugaredLogger) *AuthController {
+func NewAuthController(authService AuthService, tokenService shared.TokenService, logger *zap.SugaredLogger) *AuthController {
 	return &AuthController{authService: authService, tokenService: tokenService, logger: logger}
 }
 
 func (a AuthController) RegisterRoutes(r *chi.Mux) {
 	r.Route("/v1/auth", func(r chi.Router) {
-		r.With(api.JsonBodyMiddleware[auth.UserRequest](a.logger)).Post("/login", a.LoginHandler())
-		r.With(api.JsonBodyMiddleware[auth.UserRequest](a.logger)).Post("/register", a.RegisterHandler())
-		r.With(api.JsonBodyMiddleware[auth.RefreshRequest](a.logger)).Post("/refresh", a.RefreshHandler())
-		r.With(api.JsonBodyMiddleware[auth.RefreshRequest](a.logger)).Post("/logout", a.LogoutHandler())
+		r.With(middleware.JsonBodyMiddleware[UserRequest](a.logger)).Post("/login", a.LoginHandler())
+		r.With(middleware.JsonBodyMiddleware[UserRequest](a.logger)).Post("/register", a.RegisterHandler())
+		r.With(middleware.JsonBodyMiddleware[RefreshRequest](a.logger)).Post("/refresh", a.RefreshHandler())
+		r.With(middleware.JsonBodyMiddleware[RefreshRequest](a.logger)).Post("/logout", a.LogoutHandler())
 	})
 }

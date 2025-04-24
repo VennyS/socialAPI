@@ -2,8 +2,7 @@ package auth
 
 import (
 	"net/http"
-	"socialAPI/internal/api"
-	"socialAPI/internal/api/service/auth"
+	"socialAPI/internal/api/middleware"
 	"socialAPI/internal/lib"
 
 	"github.com/go-chi/render"
@@ -11,7 +10,7 @@ import (
 
 func (c AuthController) LoginHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		req := r.Context().Value(api.DataKey).(auth.UserRequest)
+		req := r.Context().Value(middleware.DataKey).(UserRequest)
 
 		c.logger.Infow("Login attempt", "email", req.Email)
 
@@ -24,7 +23,7 @@ func (c AuthController) LoginHandler() http.HandlerFunc {
 
 		c.logger.Infow("Login success", "email", req.Email)
 
-		response := auth.LoginResponse{AccessToken: tokenPair.AccessToken, RefreshToken: tokenPair.RefreshToken}
+		response := LoginResponse{AccessToken: tokenPair.AccessToken, RefreshToken: tokenPair.RefreshToken}
 
 		render.Status(r, http.StatusOK)
 		render.JSON(w, r, response)
@@ -33,7 +32,7 @@ func (c AuthController) LoginHandler() http.HandlerFunc {
 
 func (c AuthController) RegisterHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		req := r.Context().Value(api.DataKey).(auth.UserRequest)
+		req := r.Context().Value(middleware.DataKey).(UserRequest)
 
 		c.logger.Infow("Register attempt", "email", req.Email)
 
@@ -52,7 +51,7 @@ func (c AuthController) RegisterHandler() http.HandlerFunc {
 
 func (c AuthController) RefreshHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		req := r.Context().Value(api.DataKey).(auth.RefreshRequest)
+		req := r.Context().Value(middleware.DataKey).(RefreshRequest)
 
 		c.logger.Infow("Refresh token attempt", "refresh token", req.Refresh)
 
@@ -65,7 +64,7 @@ func (c AuthController) RefreshHandler() http.HandlerFunc {
 
 		c.logger.Infow("Token refresh success", "refresh token", req.Refresh)
 
-		response := auth.LoginResponse{AccessToken: tokenPair.AccessToken, RefreshToken: tokenPair.RefreshToken}
+		response := LoginResponse{AccessToken: tokenPair.AccessToken, RefreshToken: tokenPair.RefreshToken}
 
 		render.Status(r, http.StatusOK)
 		render.JSON(w, r, response)
@@ -74,7 +73,7 @@ func (c AuthController) RefreshHandler() http.HandlerFunc {
 
 func (c AuthController) LogoutHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		req := r.Context().Value(api.DataKey).(auth.RefreshRequest)
+		req := r.Context().Value(middleware.DataKey).(RefreshRequest)
 
 		c.logger.Infow("Logout attempt", "refresh token", req.Refresh)
 

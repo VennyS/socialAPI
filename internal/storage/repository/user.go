@@ -7,8 +7,9 @@ import (
 type UserRepository interface {
 	Create(user *User) error
 	FindByEmail(email string) (*User, error)
-	Exists(email string) (bool, error)
+	EmailExists(email string) (bool, error)
 	GetAll(excludeID *uint) ([]User, error)
+	IDsExists(IDs []uint) (bool, error)
 }
 
 type userPostgresRepo struct {
@@ -34,7 +35,7 @@ func (repo userPostgresRepo) Create(user *User) error {
 	return nil
 }
 
-func (repo userPostgresRepo) Exists(email string) (bool, error) {
+func (repo userPostgresRepo) EmailExists(email string) (bool, error) {
 	var count int64
 	err := repo.db.Model(&User{}).Where("email = ?", email).Count(&count).Error
 	if err != nil {
@@ -60,4 +61,13 @@ func (repo userPostgresRepo) GetAll(excludeID *uint) ([]User, error) {
 	}
 
 	return users, nil
+}
+
+func (repo userPostgresRepo) IDsExists(IDs []uint) (bool, error) {
+	var count int64
+	err := repo.db.Model(&User{}).Where("id IN ?", IDs).Count(&count).Error
+	if err != nil {
+		return false, err
+	}
+	return count == int64(len(IDs)), nil
 }

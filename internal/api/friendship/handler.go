@@ -2,8 +2,7 @@ package friendship
 
 import (
 	"net/http"
-	"socialAPI/internal/api"
-	"socialAPI/internal/api/service/friendship"
+	"socialAPI/internal/api/middleware"
 	"socialAPI/internal/lib"
 	"strconv"
 
@@ -13,8 +12,8 @@ import (
 
 func (f FriendshipController) SendRequestHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		req := r.Context().Value(api.DataKey).(friendship.FriendshipPostRequest)
-		senderID := r.Context().Value(api.UserIDKey).(uint)
+		req := r.Context().Value(middleware.DataKey).(FriendshipPostRequest)
+		senderID := r.Context().Value(middleware.UserIDKey).(uint)
 
 		f.logger.Infow("Send friend request", "senderID", senderID, "receiverID", req.ReceiverID)
 
@@ -32,7 +31,7 @@ func (f FriendshipController) SendRequestHandler() http.HandlerFunc {
 
 func (f FriendshipController) GetFriendsHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		senderID := r.Context().Value(api.UserIDKey).(uint)
+		senderID := r.Context().Value(middleware.UserIDKey).(uint)
 		statusParam := r.URL.Query().Get("status")
 
 		f.logger.Infow("Get friends request", "senderID", senderID, "status", statusParam)
@@ -62,7 +61,7 @@ func (f FriendshipController) PutStatusHandler() http.HandlerFunc {
 		}
 		chatID := uint(chatIDUint64)
 
-		req := r.Context().Value(api.DataKey).(friendship.ChangeStatusRequest)
+		req := r.Context().Value(middleware.DataKey).(ChangeStatusRequest)
 
 		f.logger.Infow("Change friendship status", "chatID", chatID, "status", req.Status)
 

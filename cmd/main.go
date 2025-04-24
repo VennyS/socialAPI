@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"net/http"
 	"socialAPI/internal/setting"
 	"socialAPI/internal/shared"
 )
@@ -21,5 +20,5 @@ func main() {
 
 	r := app.MountRouter()
 
-	http.ListenAndServe(":8080", r)
+	app.RunServer(r)
 }

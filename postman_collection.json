@@ -32,7 +32,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\r\n    \"email\": \"privet@gmail.com\",\r\n    \"password\": \"poka\"\r\n}",
+									"raw": "{\r\n    \"email\": \"aaaa@gmail.com\",\r\n    \"password\": \"poka\"\r\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -63,7 +63,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\r\n    \"email\": \"p@gmail.com\",\r\n    \"password\": \"poka\"\r\n}",
+									"raw": "{\r\n    \"email\": \"dddd@gmail.com\",\r\n    \"password\": \"poka\"\r\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -178,7 +178,7 @@
 					"name": "user",
 					"item": [
 						{
-							"name": "get all",
+							"name": "get users",
 							"request": {
 								"method": "GET",
 								"header": [],
@@ -290,6 +290,110 @@
 										"v1",
 										"friendship",
 										""
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "chat",
+					"item": [
+						{
+							"name": "{id}",
+							"item": [
+								{
+									"name": "patch status",
+									"request": {
+										"method": "PATCH",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\r\n    \"userIDs\": [1, 3],\r\n    \"name\": \"\"\r\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{baseUrl}}/v1/chat/1",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"v1",
+												"chat",
+												"1"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "get chat",
+									"request": {
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{baseUrl}}/v1/chat/1",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"v1",
+												"chat",
+												"1"
+											]
+										}
+									},
+									"response": []
+								}
+							]
+						},
+						{
+							"name": "create chat",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"userIDs\": [1, 2]\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}/v1/chat/",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"chat",
+										""
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "get chats",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/v1/chat/1",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"chat",
+										"1"
 									]
 								}
 							},
