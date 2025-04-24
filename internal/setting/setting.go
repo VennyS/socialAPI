@@ -2,6 +2,7 @@ package setting
 
 import (
 	"fmt"
+	"net/http"
 	"socialAPI/internal/api"
 	"socialAPI/internal/api/auth"
 	"socialAPI/internal/api/chat"
@@ -124,6 +125,6 @@ func (a App) MountRouter() *chi.Mux {
 	return r
 }
 
-// TODO
-func (a App) RunServer() {
+func (a App) RunServer(r *chi.Mux) {
+	http.ListenAndServe(a.cfg.Server.Addr, r)
 }
