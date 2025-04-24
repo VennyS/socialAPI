@@ -2,14 +2,10 @@ package setting
 
 import (
 	"fmt"
-	au "socialAPI/internal/api/auth"
-	chat "socialAPI/internal/api/chats"
+	"socialAPI/internal/api"
+	"socialAPI/internal/api/auth"
+	"socialAPI/internal/api/chat"
 	"socialAPI/internal/api/friendship"
-	srv "socialAPI/internal/api/service"
-	"socialAPI/internal/api/service/auth"
-	cSrv "socialAPI/internal/api/service/chat"
-	frSrv "socialAPI/internal/api/service/friendship"
-	uSrv "socialAPI/internal/api/service/user"
 	"socialAPI/internal/api/user"
 	"socialAPI/internal/lib"
 	"socialAPI/internal/setting/cfg"
@@ -27,7 +23,7 @@ import (
 type App struct {
 	cfg     cfg.Config
 	db      *gorm.DB
-	service srv.Service
+	service api.Service
 	cache   cache.CacheStore
 	logger  *zap.SugaredLogger
 }
@@ -105,15 +101,15 @@ func (a *App) MountServices() {
 
 	tokenService := shared.NewTokenService(a.cfg.Auth.AccessSecret, a.cfg.Auth.AccessTTL)
 	authService := auth.NewAuthService(repo.Users(), repo.RefreshTokens(), a.cfg.Auth, a.cache, *tokenService, a.logger)
-	userService := uSrv.NewUserService(repo.Users(), a.logger)
-	friendshipService := frSrv.NewFriendshipService(repo.Friendship(), a.logger)
-	chatService := cSrv.NewChatService(repo.Chats(), repo.Users(), a.logger)
+	userService := user.NewUserService(repo.Users(), a.logger)
+	friendshipService := friendship.NewFriendshipService(repo.Friendship(), a.logger)
+	chatService := chat.NewChatService(repo.Chats(), repo.Users(), a.logger)
 
-	a.service = srv.NewService(authService, *tokenService, userService, friendshipService, chatService)
+	a.service = api.NewService(authService, *tokenService, userService, friendshipService, chatService)
 }
 
 func (a App) MountRouter() *chi.Mux {
-	authController := au.NewAuthController(a.service.Auth(), a.service.Token(), a.logger)
+	authController := auth.NewAuthController(a.service.Auth(), a.service.Token(), a.logger)
 	userController := user.NewAuthController(a.service.User(), a.service.Token(), a.logger)
 	friendshipController := friendship.NewFriendshipController(a.service.Friendship(), a.service.Token(), a.logger)
 	chatController := chat.NewChatController(a.service.Chat(), a.service.Token(), a.logger)

@@ -2,7 +2,7 @@ package user
 
 import (
 	"net/http"
-	"socialAPI/internal/api"
+	"socialAPI/internal/api/middleware"
 	"socialAPI/internal/lib"
 
 	"github.com/go-chi/render"
@@ -15,7 +15,7 @@ func (c UserController) GetAllHandler() http.HandlerFunc {
 		var excludeID *uint
 
 		if excludeMe == "true" {
-			userID, ok := r.Context().Value(api.UserIDKey).(uint)
+			userID, ok := r.Context().Value(middleware.UserIDKey).(uint)
 			if !ok {
 				c.logger.Warnw("User ID not found in context", "error", "User ID not found")
 				lib.SendMessage(w, r, http.StatusUnauthorized, "User ID not found in context")

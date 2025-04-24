@@ -1,10 +1,10 @@
-package service
+package api
 
 import (
-	"socialAPI/internal/api/service/auth"
-	"socialAPI/internal/api/service/chat"
-	"socialAPI/internal/api/service/friendship"
-	"socialAPI/internal/api/service/user"
+	"socialAPI/internal/api/auth"
+	"socialAPI/internal/api/chat"
+	"socialAPI/internal/api/friendship"
+	"socialAPI/internal/api/user"
 	"socialAPI/internal/shared"
 )
 

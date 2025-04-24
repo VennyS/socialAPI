@@ -2,8 +2,7 @@ package chat
 
 import (
 	"net/http"
-	"socialAPI/internal/api"
-	"socialAPI/internal/api/service/chat"
+	"socialAPI/internal/api/middleware"
 	"socialAPI/internal/lib"
 
 	"github.com/go-chi/render"
@@ -11,7 +10,7 @@ import (
 
 func (c ChatController) GetOneHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		chatID := r.Context().Value(api.UserIDKey).(uint)
+		chatID := r.Context().Value(middleware.UserIDKey).(uint)
 
 		c.logger.Infow("Handling GetOne request", "chatID", chatID)
 
@@ -49,7 +48,7 @@ func (c ChatController) GetAllHandler() http.HandlerFunc {
 
 func (c ChatController) CreateHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		req := r.Context().Value(api.DataKey).(chat.CreateRequest)
+		req := r.Context().Value(middleware.DataKey).(CreateRequest)
 
 		c.logger.Infow("Create chat", "userIDs", req.UserIDs, "name", req.Name)
 		err := c.chatService.Create(req)
@@ -66,8 +65,8 @@ func (c ChatController) CreateHandler() http.HandlerFunc {
 
 func (c ChatController) UpdateHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		req := r.Context().Value(api.DataKey).(chat.CreateRequest)
-		chatID := r.Context().Value(api.UserIDKey).(uint)
+		req := r.Context().Value(middleware.DataKey).(CreateRequest)
+		chatID := r.Context().Value(middleware.UserIDKey).(uint)
 
 		c.logger.Infow("Update chat", "chatID", chatID, "userIDs", req.UserIDs, "name", req.Name)
 		err := c.chatService.Update(chatID, req)
