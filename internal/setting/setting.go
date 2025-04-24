@@ -3,9 +3,11 @@ package setting
 import (
 	"fmt"
 	au "socialAPI/internal/api/auth"
+	chat "socialAPI/internal/api/chats"
 	"socialAPI/internal/api/friendship"
 	srv "socialAPI/internal/api/service"
 	"socialAPI/internal/api/service/auth"
+	cSrv "socialAPI/internal/api/service/chat"
 	frSrv "socialAPI/internal/api/service/friendship"
 	uSrv "socialAPI/internal/api/service/user"
 	"socialAPI/internal/api/user"
@@ -99,26 +101,29 @@ func (a *App) InitStorages(madeMigrations bool) {
 }
 
 func (a *App) MountServices() {
-	postgresRepo := repository.NewPostgresRepo(a.db)
+	repo := repository.NewPostgresRepo(a.db)
 
 	tokenService := shared.NewTokenService(a.cfg.Auth.AccessSecret, a.cfg.Auth.AccessTTL)
-	authService := auth.NewAuthService(postgresRepo.Users(), postgresRepo.RefreshTokens(), a.cfg.Auth, a.cache, *tokenService, a.logger)
-	userService := uSrv.NewUserService(postgresRepo.Users(), a.logger)
-	friendshipService := frSrv.NewFriendshipService(postgresRepo.Friendship(), a.logger)
+	authService := auth.NewAuthService(repo.Users(), repo.RefreshTokens(), a.cfg.Auth, a.cache, *tokenService, a.logger)
+	userService := uSrv.NewUserService(repo.Users(), a.logger)
+	friendshipService := frSrv.NewFriendshipService(repo.Friendship(), a.logger)
+	chatService := cSrv.NewChatService(repo.Chats(), repo.Users(), a.logger)
 
-	a.service = srv.NewService(authService, *tokenService, userService, friendshipService)
+	a.service = srv.NewService(authService, *tokenService, userService, friendshipService, chatService)
 }
 
 func (a App) MountRouter() *chi.Mux {
 	authController := au.NewAuthController(a.service.Auth(), a.service.Token(), a.logger)
 	userController := user.NewAuthController(a.service.User(), a.service.Token(), a.logger)
 	friendshipController := friendship.NewFriendshipController(a.service.Friendship(), a.service.Token(), a.logger)
+	chatController := chat.NewChatController(a.service.Chat(), a.service.Token(), a.logger)
 
 	r := chi.NewRouter()
 
 	authController.RegisterRoutes(r)
 	userController.RegisterRoutes(r)
 	friendshipController.RegisterRoutes(r)
+	chatController.RegisterRoutes(r)
 
 	return r
 }

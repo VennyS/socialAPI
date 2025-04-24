@@ -44,7 +44,7 @@ type RefreshToken struct {
 
 type Chat struct {
 	ID        uint      `gorm:"primaryKey" json:"id"`
-	Name      string    `json:"name"`
+	Name      string    `json:"name,omitempty"`
 	Users     []User    `gorm:"many2many:user_chats;" json:"users,omitempty"`
 	Messages  []Message `gorm:"foreignKey:ChatID" json:"messages,omitempty"`
 	CreatedAt time.Time `json:"created_at"`
