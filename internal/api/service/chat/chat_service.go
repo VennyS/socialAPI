@@ -9,7 +9,8 @@ import (
 )
 
 type ChatService interface {
-	Create(CreateRequest) *shared.HttpError
+	Create(req CreateRequest) *shared.HttpError
+	Update(id uint, req CreateRequest) *shared.HttpError
 }
 
 type chatService struct {
@@ -22,8 +23,7 @@ func NewChatService(chatRepo r.ChatRepository, userRepo r.UserRepository, logger
 	return &chatService{chatRepo: chatRepo, userRepo: userRepo, logger: logger}
 }
 
-func (c chatService) Create(req CreateRequest) *shared.HttpError {
-	c.logger.Infow("Attemting to create chat", "userIDs", req.UserIDs, "name", req.Name)
+func (c chatService) checksUsersAndChatExistense(req CreateRequest) *shared.HttpError {
 	exists, err := c.userRepo.IDsExists(req.UserIDs)
 	if err != nil {
 		c.logger.Errorw("Error checking user IDs existence", "userIDs", req.UserIDs, "name", req.Name, "error", err)
@@ -35,7 +35,7 @@ func (c chatService) Create(req CreateRequest) *shared.HttpError {
 		return shared.NewHttpError("some user IDs do not exist", http.StatusBadRequest)
 	}
 
-	exists, err = c.chatRepo.Exists(req.UserIDs)
+	exists, err = c.chatRepo.ExistsSetUserIDs(req.UserIDs)
 
 	if exists {
 		c.logger.Warnw("Chat with the same users already exists", "userIDs", req.UserIDs, "name", req.Name)
@@ -47,12 +47,52 @@ func (c chatService) Create(req CreateRequest) *shared.HttpError {
 		return shared.InternalError
 	}
 
-	err = c.chatRepo.Create(req.Name, req.UserIDs)
+	return nil
+}
+
+func (c chatService) Create(req CreateRequest) *shared.HttpError {
+	c.logger.Infow("Attemting to create chat", "userIDs", req.UserIDs, "name", req.Name)
+	hErr := c.checksUsersAndChatExistense(req)
+	if hErr != nil {
+		return hErr
+	}
+
+	err := c.chatRepo.Create(req.Name, req.UserIDs)
 	if err != nil {
 		c.logger.Errorw("Error creating chat", "userIDs", req.UserIDs, "name", req.Name, "error", err)
 		return shared.InternalError
 	}
 
-	c.logger.Infow("Chat successfully created", "userIDs", req.UserIDs, "name", req.Name)
+	c.logger.Infow("Chat created successfully", "userIDs", req.UserIDs, "name", req.Name)
+	return nil
+}
+
+func (c chatService) Update(id uint, req CreateRequest) *shared.HttpError {
+	c.logger.Infow("Attempting to update chat", "chatID", id, "userIDs", req.UserIDs, "name", req.Name)
+
+	hErr := c.checksUsersAndChatExistense(req)
+	if hErr != nil {
+		c.logger.Warnw("User validation failed during chat update", "chatID", id, "userIDs", req.UserIDs, "name", req.Name, "error", hErr)
+		return hErr
+	}
+
+	exists, err := c.chatRepo.ExistsID(id)
+	if err != nil {
+		c.logger.Errorw("Failed to check chat existence", "chatID", id, "error", err)
+		return shared.InternalError
+	}
+
+	if !exists {
+		c.logger.Warnw("Chat not found", "chatID", id)
+		return shared.NewHttpError("chat not found", http.StatusNotFound)
+	}
+
+	err = c.chatRepo.Update(id, req.Name, req.UserIDs)
+	if err != nil {
+		c.logger.Errorw("Error while updating chat", "chatID", id, "userIDs", req.UserIDs, "name", req.Name, "error", err)
+		return shared.InternalError
+	}
+
+	c.logger.Infow("Chat updated successfully", "chatID", id, "userIDs", req.UserIDs, "name", req.Name)
 	return nil
 }
