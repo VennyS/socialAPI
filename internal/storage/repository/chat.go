@@ -2,11 +2,65 @@ package repository
 
 import (
 	"fmt"
+	"time"
 
 	"gorm.io/gorm"
 )
 
+// ChatDTO - это структура для отправки данных о чате без лишней информации
+type ChatDTO struct {
+	ID        uint         `json:"id"`
+	Messages  []MessageDTO `json:"messages,omitempty"`
+	CreatedAt time.Time    `json:"created_at"`
+	UpdatedAt time.Time    `json:"updated_at"`
+}
+
+// MessageDTO - это структура для отправки данных о сообщении без лишней информации
+type MessageDTO struct {
+	ID        uint      `json:"id"`
+	Content   string    `json:"content"`
+	Sender    SenderDTO `json:"sender"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// SenderDTO - структура для отправки данных о пользователе (отправителе)
+type SenderDTO struct {
+	ID    uint   `json:"id"`
+	Email string `json:"email"`
+}
+
+// ConvertToDTO преобразует Chat в ChatDTO
+func (chat *Chat) ConvertToDTO() *ChatDTO {
+	var messageDTOs []MessageDTO
+	for _, message := range chat.Messages {
+		messageDTOs = append(messageDTOs, MessageDTO{
+			ID:        message.ID,
+			Content:   message.Content,
+			Sender:    message.Sender.ConvertToDTO(), // Преобразуем отправителя
+			CreatedAt: message.CreatedAt,
+			UpdatedAt: message.UpdatedAt,
+		})
+	}
+
+	return &ChatDTO{
+		ID:        chat.ID,
+		Messages:  messageDTOs,
+		CreatedAt: chat.CreatedAt,
+		UpdatedAt: chat.UpdatedAt,
+	}
+}
+
+func (user *User) ConvertToDTO() SenderDTO {
+	return SenderDTO{
+		ID:    user.ID,
+		Email: user.Email,
+	}
+}
+
 type ChatRepository interface {
+	GetOne(chatID uint) (*Chat, error)
+	GetAll() ([]*Chat, error)
 	Create(name *string, userIDs []uint) error
 	ExistsSetUserIDs(userIDs []uint) (bool, error)
 	ExistsID(chatID uint) (bool, error)
@@ -19,6 +73,25 @@ type chatPostgresRepo struct {
 
 func NewPostgresChatRepo(db *gorm.DB) ChatRepository {
 	return chatPostgresRepo{db: db}
+}
+
+func (repo chatPostgresRepo) GetOne(chatID uint) (*Chat, error) {
+	var chat *Chat
+	err := repo.db.Preload("Messages.Sender").First(&chat, chatID).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return chat, nil
+}
+
+func (repo chatPostgresRepo) GetAll() ([]*Chat, error) {
+	var chats []*Chat
+	err := repo.db.Preload("Messages.Sender").Find(&chats).Error
+	if err != nil {
+		return nil, err
+	}
+	return chats, nil
 }
 
 func (repo chatPostgresRepo) Create(name *string, userIDs []uint) error {

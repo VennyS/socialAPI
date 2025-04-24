@@ -5,7 +5,47 @@ import (
 	"socialAPI/internal/api"
 	"socialAPI/internal/api/service/chat"
 	"socialAPI/internal/lib"
+
+	"github.com/go-chi/render"
 )
+
+func (c ChatController) GetOneHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		chatID := r.Context().Value(api.UserIDKey).(uint)
+
+		c.logger.Infow("Handling GetOne request", "chatID", chatID)
+
+		chat, err := c.chatService.GetOne(chatID)
+		if err != nil {
+			c.logger.Errorw("Failed to get chat", "chatID", chatID, "error", err)
+			lib.SendMessage(w, r, err.StatusCode, err.Error())
+			return
+		}
+
+		c.logger.Infow("Chat successfully retrieved", "chatID", chatID)
+
+		render.Status(r, http.StatusOK)
+		render.JSON(w, r, chat)
+	}
+}
+
+func (c ChatController) GetAllHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		c.logger.Infow("Handling GetAll request")
+
+		chats, err := c.chatService.GetAll()
+		if err != nil {
+			c.logger.Errorw("Failed to get chats", "error", err)
+			lib.SendMessage(w, r, err.StatusCode, err.Error())
+			return
+		}
+
+		c.logger.Infow("Chats successfully retrieved")
+
+		render.Status(r, http.StatusOK)
+		render.JSON(w, r, chats)
+	}
+}
 
 func (c ChatController) CreateHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {

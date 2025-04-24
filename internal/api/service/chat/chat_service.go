@@ -9,6 +9,8 @@ import (
 )
 
 type ChatService interface {
+	GetOne(chatID uint) (*r.ChatDTO, *shared.HttpError)
+	GetAll() (*[]r.ChatDTO, *shared.HttpError)
 	Create(req CreateRequest) *shared.HttpError
 	Update(id uint, req CreateRequest) *shared.HttpError
 }
@@ -48,6 +50,55 @@ func (c chatService) checksUsersAndChatExistense(req CreateRequest) *shared.Http
 	}
 
 	return nil
+}
+
+func (c chatService) GetOne(id uint) (*r.ChatDTO, *shared.HttpError) {
+	c.logger.Infow("Fetching chat", "chatID", id)
+
+	exists, err := c.chatRepo.ExistsID(id)
+	if err != nil {
+		c.logger.Errorw("Failed to check chat existence", "chatID", id, "error", err)
+		return nil, shared.InternalError
+	}
+
+	if !exists {
+		c.logger.Warnw("Chat not found", "chatID", id)
+		return nil, shared.NewHttpError("chat not found", http.StatusNotFound)
+	}
+
+	chat, err := c.chatRepo.GetOne(id)
+	if err != nil {
+		c.logger.Errorw("Failed to fetch chat", "chatID", id, "error", err)
+		return nil, shared.InternalError
+	}
+
+	c.logger.Infow("Chat successfully fetched", "chatID", id)
+
+	chatDTO := chat.ConvertToDTO()
+	c.logger.Infow("Chat successfully converted to DTO", "chatID", id)
+
+	return chatDTO, nil
+}
+
+func (c chatService) GetAll() (*[]r.ChatDTO, *shared.HttpError) {
+	c.logger.Infow("Fetching chats")
+
+	chats, err := c.chatRepo.GetAll() // Получаем список чатов
+	if err != nil {
+		c.logger.Errorw("Failed to fetch chats", "error", err)
+		return nil, shared.InternalError
+	}
+
+	c.logger.Infow("Chats successfully fetched")
+
+	chatDTOs := []r.ChatDTO{}
+	for _, chat := range chats {
+		chatDTOs = append(chatDTOs, *chat.ConvertToDTO()) // Конвертируем каждый чат
+	}
+
+	c.logger.Infow("Chats successfully converted to DTOs")
+
+	return &chatDTOs, nil
 }
 
 func (c chatService) Create(req CreateRequest) *shared.HttpError {
