@@ -8,7 +8,9 @@ import (
 
 type ChatRepository interface {
 	Create(name *string, userIDs []uint) error
-	Exists(userIDS []uint) (bool, error)
+	ExistsSetUserIDs(userIDs []uint) (bool, error)
+	ExistsID(chatID uint) (bool, error)
+	Update(id uint, name *string, userIDs []uint) error
 }
 
 type chatPostgresRepo struct {
@@ -40,7 +42,7 @@ func (repo chatPostgresRepo) Create(name *string, userIDs []uint) error {
 	return nil
 }
 
-func (repo chatPostgresRepo) Exists(userIDs []uint) (bool, error) {
+func (repo chatPostgresRepo) ExistsSetUserIDs(userIDs []uint) (bool, error) {
 	var chatCount int64
 
 	err := repo.db.
@@ -57,9 +59,49 @@ func (repo chatPostgresRepo) Exists(userIDs []uint) (bool, error) {
 		return true, err
 	}
 
-	if chatCount == 64 {
+	if chatCount == 0 {
 		return false, nil
 	}
 
 	return true, fmt.Errorf("chat with same userIDs already exists")
+}
+
+func (repo chatPostgresRepo) ExistsID(chatID uint) (bool, error) {
+	var count int64
+	err := repo.db.
+		Model(&Chat{}).
+		Where("id = ?", chatID).
+		Count(&count).Error
+
+	if err != nil {
+		return false, err
+	}
+
+	return count > 0, nil
+}
+
+func (repo chatPostgresRepo) Update(id uint, name *string, userIDs []uint) error {
+	var chat Chat
+	if err := repo.db.Preload("Users").First(&chat, id).Error; err != nil {
+		return err
+	}
+
+	if name != nil {
+		chat.Name = *name
+	}
+
+	if err := repo.db.Model(&chat).Update("name", chat.Name).Error; err != nil {
+		return err
+	}
+
+	users := make([]User, len(userIDs))
+	for i, id := range userIDs {
+		users[i] = User{ID: id}
+	}
+
+	if err := repo.db.Model(&chat).Association("Users").Replace(users); err != nil {
+		return err
+	}
+
+	return nil
 }
