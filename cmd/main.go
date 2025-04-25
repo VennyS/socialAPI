@@ -14,6 +14,7 @@ func main() {
 	app := setting.App{}
 	app.LoadConfig()
 	app.SetupLogger()
+	app.SetupWS()
 	shared.InitValidator()
 	app.InitStorages(migrations)
 	app.MountServices()

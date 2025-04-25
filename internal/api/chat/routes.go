@@ -21,6 +21,7 @@ func NewChatController(chatService ChatService, tokenService shared.TokenService
 func (c ChatController) RegisterRoutes(r *chi.Mux) {
 	r.Route("/v1/chat", func(r chi.Router) {
 		r.With(middleware.AuthMiddleware(&c.tokenService, c.logger)).Get("/", c.GetAllHandler())
+		r.With(middleware.AuthMiddleware(&c.tokenService, c.logger)).Get("/ws", c.BroadcastHandler())
 		r.With(middleware.AuthMiddleware(&c.tokenService, c.logger)).Get("/{id}", c.GetOneHandler())
 		r.With(middleware.AuthMiddleware(&c.tokenService, c.logger), middleware.JsonBodyMiddleware[CreateRequest](c.logger)).Post("/", c.CreateHandler())
 		r.With(middleware.AuthMiddleware(&c.tokenService, c.logger), middleware.JsonBodyMiddleware[CreateRequest](c.logger)).Patch("/{id}", c.UpdateHandler())

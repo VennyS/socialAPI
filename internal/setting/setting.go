@@ -6,6 +6,7 @@ import (
 	"socialAPI/internal/api"
 	"socialAPI/internal/api/auth"
 	"socialAPI/internal/api/chat"
+	"socialAPI/internal/api/chat/ws"
 	"socialAPI/internal/api/friendship"
 	"socialAPI/internal/api/user"
 	"socialAPI/internal/lib"
@@ -27,6 +28,7 @@ type App struct {
 	service api.Service
 	cache   cache.CacheStore
 	logger  *zap.SugaredLogger
+	hub     *ws.Hub
 }
 
 func (a *App) LoadConfig() {
@@ -66,7 +68,12 @@ func (a *App) SetupLogger() {
 	}
 }
 
-func (a *App) InitStorages(madeMigrations bool) {
+func (a *App) SetupWS() {
+	a.hub = ws.NewHub(a.logger)
+	go a.hub.Run()
+}
+
+func (a *App) InitStorages(doMigrations bool) {
 	dsn := fmt.Sprintf(
 		"host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
 		a.cfg.DB.Host,
@@ -79,7 +86,7 @@ func (a *App) InitStorages(madeMigrations bool) {
 
 	var err error
 	a.db, err = storage.BootstrapDatabase(dsn)
-	if madeMigrations {
+	if doMigrations {
 		storage.MadeMigrations(a.db)
 	}
 
@@ -104,7 +111,7 @@ func (a *App) MountServices() {
 	authService := auth.NewAuthService(repo.Users(), repo.RefreshTokens(), a.cfg.Auth, a.cache, *tokenService, a.logger)
 	userService := user.NewUserService(repo.Users(), a.logger)
 	friendshipService := friendship.NewFriendshipService(repo.Friendship(), a.logger)
-	chatService := chat.NewChatService(repo.Chats(), repo.Users(), a.logger)
+	chatService := chat.NewChatService(repo.Chats(), repo.Users(), a.hub, a.logger)
 
 	a.service = api.NewService(authService, *tokenService, userService, friendshipService, chatService)
 }
