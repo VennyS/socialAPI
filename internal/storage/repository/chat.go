@@ -65,6 +65,7 @@ type ChatRepository interface {
 	ExistsSetUserIDs(userIDs []uint) (bool, error)
 	ExistsID(chatID uint) (bool, error)
 	Update(id uint, name *string, userIDs []uint) error
+	GetChatIDsByUserID(userID uint) ([]uint, error)
 }
 
 type chatPostgresRepo struct {
@@ -177,4 +178,13 @@ func (repo chatPostgresRepo) Update(id uint, name *string, userIDs []uint) error
 	}
 
 	return nil
+}
+
+func (repo chatPostgresRepo) GetChatIDsByUserID(userID uint) ([]uint, error) {
+	var chatIDs []uint
+	err := repo.db.
+		Table("user_chats").
+		Where("user_id = ?", userID).
+		Pluck("chat_id", &chatIDs).Error
+	return chatIDs, err
 }
