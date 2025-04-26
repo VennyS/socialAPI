@@ -17,5 +17,5 @@ func NewPostgresMessageRepo(db *gorm.DB) MessageRepository {
 func (repo messagePostgresRepo) Create(chatID, senderID uint, content string) error {
 	message := Message{ChatID: chatID, SenderID: senderID, Content: content}
 
-	return repo.db.Create(message).Error
+	return repo.db.Create(&message).Error
 }
