@@ -9,15 +9,22 @@ import (
 	"github.com/dgrijalva/jwt-go"
 )
 
+type TokenService interface {
+	GenerateTokenPair(userID uint) (*TokenPair, error)
+	GenerateAccessToken(userID uint) (string, error)
+	GenerateRefreshToken() (string, error)
+	ValidateToken(tokenString string) (*Claims, error)
+}
+
 // TokenService handles JWT token generation and validation
-type TokenService struct {
+type jwtTokenService struct {
 	accessSecret   string
 	accessTokenTTL time.Duration
 }
 
 // NewTokenService creates a new TokenService instance
-func NewTokenService(accessSecret string, accessTokenTTL time.Duration) *TokenService {
-	return &TokenService{
+func NewTokenService(accessSecret string, accessTokenTTL time.Duration) TokenService {
+	return &jwtTokenService{
 		accessSecret:   accessSecret,
 		accessTokenTTL: accessTokenTTL,
 	}
@@ -36,13 +43,13 @@ type Claims struct {
 }
 
 // GenerateTokenPair generates both access and refresh tokens
-func (ts *TokenService) GenerateTokenPair(userID uint) (*TokenPair, error) {
-	accessToken, err := ts.generateAccessToken(userID)
+func (ts *jwtTokenService) GenerateTokenPair(userID uint) (*TokenPair, error) {
+	accessToken, err := ts.GenerateAccessToken(userID)
 	if err != nil {
 		return nil, err
 	}
 
-	refreshToken, err := generateRefreshToken()
+	refreshToken, err := ts.GenerateRefreshToken()
 	if err != nil {
 		return nil, err
 	}
@@ -54,7 +61,7 @@ func (ts *TokenService) GenerateTokenPair(userID uint) (*TokenPair, error) {
 }
 
 // generateAccessToken creates a new JWT access token
-func (ts *TokenService) generateAccessToken(userID uint) (string, error) {
+func (ts *jwtTokenService) GenerateAccessToken(userID uint) (string, error) {
 	claims := &Claims{
 		UserID: userID,
 		StandardClaims: jwt.StandardClaims{
@@ -73,7 +80,7 @@ func (ts *TokenService) generateAccessToken(userID uint) (string, error) {
 }
 
 // generateRefreshToken creates a secure random refresh token
-func generateRefreshToken() (string, error) {
+func (ts *jwtTokenService) GenerateRefreshToken() (string, error) {
 	b := make([]byte, 32)
 	_, err := rand.Read(b)
 	if err != nil {
@@ -83,7 +90,7 @@ func generateRefreshToken() (string, error) {
 }
 
 // ValidateToken validates the JWT token and returns claims
-func (ts *TokenService) ValidateToken(tokenString string) (*Claims, error) {
+func (ts *jwtTokenService) ValidateToken(tokenString string) (*Claims, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, errors.New("unexpected signing method")

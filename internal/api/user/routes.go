@@ -20,6 +20,6 @@ func NewAuthController(userService UserService, tokenService shared.TokenService
 
 func (u UserController) RegisterRoutes(r *chi.Mux) {
 	r.Route("/v1/user", func(r chi.Router) {
-		r.With(middleware.AuthMiddleware(&u.tokenService, u.logger)).Get("/", u.GetAllHandler())
+		r.With(middleware.AuthMiddleware(u.tokenService, u.logger)).Get("/", u.GetAllHandler())
 	})
 }

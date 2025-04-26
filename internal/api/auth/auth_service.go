@@ -9,7 +9,6 @@ import (
 	"socialAPI/internal/shared"
 	"socialAPI/internal/storage/cache"
 	"socialAPI/internal/storage/repository"
-	r "socialAPI/internal/storage/repository"
 	"time"
 
 	"go.uber.org/zap"
@@ -24,15 +23,15 @@ type AuthService interface {
 }
 
 type authService struct {
-	userRepo     r.UserRepository
-	refreshRepo  r.RefreshTokenService
+	userRepo     repository.UserRepository
+	refreshRepo  repository.RefreshTokenService
 	cfg          cfg.AuthConfig
 	cache        cache.CacheStore
 	tokenService shared.TokenService
 	logger       *zap.SugaredLogger
 }
 
-func NewAuthService(userRepo r.UserRepository, refreshRepo r.RefreshTokenService, cfg cfg.AuthConfig, cache cache.CacheStore, tokenService shared.TokenService, logger *zap.SugaredLogger) AuthService {
+func NewAuthService(userRepo repository.UserRepository, refreshRepo repository.RefreshTokenService, cfg cfg.AuthConfig, cache cache.CacheStore, tokenService shared.TokenService, logger *zap.SugaredLogger) AuthService {
 	return &authService{userRepo: userRepo, refreshRepo: refreshRepo, cfg: cfg, cache: cache, tokenService: tokenService, logger: logger}
 }
 
