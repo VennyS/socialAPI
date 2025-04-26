@@ -22,8 +22,8 @@ func NewClient(conn *websocket.Conn, send chan Message, hub *Hub, userID uint, c
 }
 
 type IncomingMessage struct {
-	ChatID uint   `json:"chat_id"`
-	Text   string `json:"text"`
+	ChatID  uint   `json:"chat_id"`
+	Content string `json:"content"`
 }
 
 func (c *Client) ReadPump() {
@@ -78,7 +78,7 @@ func (c *Client) WritePump() {
 				c.logger.Errorw("Error sending message", "error", err, "clientID", c.userID)
 				return
 			}
-			c.logger.Infow("Message sent", "senderID", message.SenderID, "chatID", message.ChatID, "message", message.Text)
+			c.logger.Infow("Message sent", "senderID", message.SenderID, "chatID", message.ChatID, "content", message.Content)
 
 		case <-ticker.C:
 			c.conn.SetWriteDeadline(time.Now().Add(10 * time.Second))

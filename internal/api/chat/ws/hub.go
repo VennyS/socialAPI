@@ -1,6 +1,10 @@
 package ws
 
-import "go.uber.org/zap"
+import (
+	r "socialAPI/internal/storage/repository"
+
+	"go.uber.org/zap"
+)
 
 type Message struct {
 	IncomingMessage
@@ -8,20 +12,24 @@ type Message struct {
 }
 
 type Hub struct {
-	clients    map[*Client]bool
-	broadcast  chan Message
-	Register   chan *Client
-	unregister chan *Client
-	logger     *zap.SugaredLogger
+	clients     map[*Client]bool
+	broadcast   chan Message
+	Register    chan *Client
+	unregister  chan *Client
+	messageRepo r.MessageRepository
+	chatRepo    r.ChatRepository
+	logger      *zap.SugaredLogger
 }
 
-func NewHub(logger *zap.SugaredLogger) *Hub {
+func NewHub(messageRepo r.MessageRepository, chatRepo r.ChatRepository, logger *zap.SugaredLogger) *Hub {
 	return &Hub{
-		broadcast:  make(chan Message),
-		Register:   make(chan *Client),
-		unregister: make(chan *Client),
-		clients:    make(map[*Client]bool),
-		logger:     logger,
+		broadcast:   make(chan Message),
+		Register:    make(chan *Client),
+		unregister:  make(chan *Client),
+		clients:     make(map[*Client]bool),
+		messageRepo: messageRepo,
+		chatRepo:    chatRepo,
+		logger:      logger,
 	}
 }
 
@@ -47,8 +55,28 @@ func (h *Hub) Run() {
 			h.logger.Infow("Broadcasting message",
 				"senderID", message.SenderID,
 				"chatID", message.IncomingMessage.ChatID,
-				"message", message.IncomingMessage.Text)
+				"content", message.IncomingMessage.Content)
 
+			exists, err := h.chatRepo.ExistsID(message.ChatID)
+			if !exists {
+				h.logger.Warnw("Chat doesnt exists", "senderID", message.SenderID,
+					"chatID", message.IncomingMessage.ChatID,
+					"content", message.IncomingMessage.Content)
+			}
+
+			if err != nil {
+				h.logger.Errorw("Error checking existence chatID", "senderID", message.SenderID,
+					"chatID", message.IncomingMessage.ChatID,
+					"content", message.IncomingMessage.Content, "error", err)
+			}
+
+			err = h.messageRepo.Create(message.ChatID, message.SenderID, message.Content)
+			if err != nil {
+				h.logger.Errorw("Error creating message", "senderID", message.SenderID,
+					"chatID", message.IncomingMessage.ChatID,
+					"content", message.IncomingMessage.Content, "error", err)
+				continue
+			}
 			for client := range h.clients {
 				client.send <- message
 			}

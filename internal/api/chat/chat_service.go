@@ -2,10 +2,11 @@ package chat
 
 import (
 	"net/http"
-	"socialAPI/internal/api/chat/ws"
+	chatWS "socialAPI/internal/api/chat/ws"
 	"socialAPI/internal/shared"
 	r "socialAPI/internal/storage/repository"
 
+	"github.com/gorilla/websocket"
 	"go.uber.org/zap"
 )
 
@@ -18,14 +19,15 @@ type ChatService interface {
 }
 
 type chatService struct {
-	userRepo r.UserRepository
-	chatRepo r.ChatRepository
-	hub      *ws.Hub
-	logger   *zap.SugaredLogger
+	userRepo   r.UserRepository
+	chatRepo   r.ChatRepository
+	hub        *chatWS.Hub
+	wsUpgrader *websocket.Upgrader
+	logger     *zap.SugaredLogger
 }
 
-func NewChatService(chatRepo r.ChatRepository, userRepo r.UserRepository, hub *ws.Hub, logger *zap.SugaredLogger) ChatService {
-	return &chatService{chatRepo: chatRepo, userRepo: userRepo, logger: logger, hub: hub}
+func NewChatService(chatRepo r.ChatRepository, userRepo r.UserRepository, hub *chatWS.Hub, wsUpgrader *websocket.Upgrader, logger *zap.SugaredLogger) ChatService {
+	return &chatService{chatRepo: chatRepo, userRepo: userRepo, hub: hub, wsUpgrader: wsUpgrader, logger: logger}
 }
 
 func (c chatService) checksUsersAndChatExistense(req CreateRequest) *shared.HttpError {
@@ -160,7 +162,7 @@ func (c chatService) HandleWebSocket(userID uint, w http.ResponseWriter, r *http
 		return shared.InternalError
 	}
 
-	conn, err := ws.Upgrader.Upgrade(w, r, nil)
+	conn, err := c.wsUpgrader.Upgrade(w, r, nil)
 	if err != nil {
 		c.logger.Errorw("WebSocket upgrade failed", "userID", userID, "error", err)
 		return shared.NewHttpError("WebSocket upgrade failed", http.StatusBadRequest)
@@ -173,7 +175,7 @@ func (c chatService) HandleWebSocket(userID uint, w http.ResponseWriter, r *http
 		chatIDMap[id] = true
 	}
 
-	client := ws.NewClient(conn, make(chan ws.Message, 256), c.hub, userID, chatIDMap, c.logger)
+	client := chatWS.NewClient(conn, make(chan chatWS.Message, 256), c.hub, userID, chatIDMap, c.logger)
 
 	c.hub.Register <- client
 
