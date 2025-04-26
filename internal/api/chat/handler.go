@@ -80,3 +80,15 @@ func (c ChatController) UpdateHandler() http.HandlerFunc {
 		lib.SendMessage(w, r, http.StatusOK, "Chat changed successfully")
 	}
 }
+
+func (c ChatController) BroadcastHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		senderID := r.Context().Value(middleware.UserIDKey).(uint)
+		err := c.chatService.HandleWebSocket(senderID, w, r)
+
+		if err != nil {
+			lib.SendMessage(w, r, err.StatusCode, err.Error())
+			return
+		}
+	}
+}

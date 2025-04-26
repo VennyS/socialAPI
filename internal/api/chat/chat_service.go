@@ -2,9 +2,11 @@ package chat
 
 import (
 	"net/http"
+	chatWS "socialAPI/internal/api/chat/ws"
 	"socialAPI/internal/shared"
 	r "socialAPI/internal/storage/repository"
 
+	"github.com/gorilla/websocket"
 	"go.uber.org/zap"
 )
 
@@ -13,16 +15,19 @@ type ChatService interface {
 	GetAll() (*[]r.ChatDTO, *shared.HttpError)
 	Create(req CreateRequest) *shared.HttpError
 	Update(id uint, req CreateRequest) *shared.HttpError
+	HandleWebSocket(userID uint, w http.ResponseWriter, r *http.Request) *shared.HttpError
 }
 
 type chatService struct {
-	userRepo r.UserRepository
-	chatRepo r.ChatRepository
-	logger   *zap.SugaredLogger
+	userRepo   r.UserRepository
+	chatRepo   r.ChatRepository
+	hub        *chatWS.Hub
+	wsUpgrader *websocket.Upgrader
+	logger     *zap.SugaredLogger
 }
 
-func NewChatService(chatRepo r.ChatRepository, userRepo r.UserRepository, logger *zap.SugaredLogger) ChatService {
-	return &chatService{chatRepo: chatRepo, userRepo: userRepo, logger: logger}
+func NewChatService(chatRepo r.ChatRepository, userRepo r.UserRepository, hub *chatWS.Hub, wsUpgrader *websocket.Upgrader, logger *zap.SugaredLogger) ChatService {
+	return &chatService{chatRepo: chatRepo, userRepo: userRepo, hub: hub, wsUpgrader: wsUpgrader, logger: logger}
 }
 
 func (c chatService) checksUsersAndChatExistense(req CreateRequest) *shared.HttpError {
@@ -145,5 +150,36 @@ func (c chatService) Update(id uint, req CreateRequest) *shared.HttpError {
 	}
 
 	c.logger.Infow("Chat updated successfully", "chatID", id, "userIDs", req.UserIDs, "name", req.Name)
+	return nil
+}
+
+func (c chatService) HandleWebSocket(userID uint, w http.ResponseWriter, r *http.Request) *shared.HttpError {
+	c.logger.Infow("Handling WebSocket connection", "userID", userID)
+
+	chatIDs, err := c.chatRepo.GetChatIDsByUserID(userID)
+	if err != nil {
+		c.logger.Errorw("Failed to get chat IDs", "userID", userID, "error", err)
+		return shared.InternalError
+	}
+
+	conn, err := c.wsUpgrader.Upgrade(w, r, nil)
+	if err != nil {
+		c.logger.Errorw("WebSocket upgrade failed", "userID", userID, "error", err)
+		return shared.NewHttpError("WebSocket upgrade failed", http.StatusBadRequest)
+	}
+
+	c.logger.Infow("WebSocket connection established", "userID", userID)
+
+	chatIDMap := make(map[uint]bool)
+	for _, id := range chatIDs {
+		chatIDMap[id] = true
+	}
+
+	client := chatWS.NewClient(conn, make(chan chatWS.Message, 256), c.hub, userID, chatIDMap, c.logger)
+
+	c.hub.Register <- client
+
+	c.logger.Infow("Client registered in hub", "userID", userID)
+
 	return nil
 }

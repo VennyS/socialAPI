@@ -6,6 +6,7 @@ import (
 	"socialAPI/internal/api"
 	"socialAPI/internal/api/auth"
 	"socialAPI/internal/api/chat"
+	"socialAPI/internal/api/chat/ws"
 	"socialAPI/internal/api/friendship"
 	"socialAPI/internal/api/user"
 	"socialAPI/internal/lib"
@@ -17,16 +18,23 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/gorilla/websocket"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
+type WebSocket struct {
+	hub      *ws.Hub
+	upgrader *websocket.Upgrader
+}
+
 type App struct {
-	cfg     cfg.Config
-	db      *gorm.DB
-	service api.Service
-	cache   cache.CacheStore
-	logger  *zap.SugaredLogger
+	cfg       cfg.Config
+	db        *gorm.DB
+	service   api.Service
+	cache     cache.CacheStore
+	logger    *zap.SugaredLogger
+	webSocket WebSocket
 }
 
 func (a *App) LoadConfig() {
@@ -66,7 +74,16 @@ func (a *App) SetupLogger() {
 	}
 }
 
-func (a *App) InitStorages(madeMigrations bool) {
+func (a *App) setupWS(messageRepo repository.MessageRepository, chatRepo repository.ChatRepository) {
+	a.webSocket = WebSocket{
+		hub:      ws.NewHub(messageRepo, chatRepo, a.logger),
+		upgrader: cfg.NewUpgrader(),
+	}
+
+	go a.webSocket.hub.Run()
+}
+
+func (a *App) InitStorages(doMigrations bool) {
 	dsn := fmt.Sprintf(
 		"host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
 		a.cfg.DB.Host,
@@ -79,7 +96,7 @@ func (a *App) InitStorages(madeMigrations bool) {
 
 	var err error
 	a.db, err = storage.BootstrapDatabase(dsn)
-	if madeMigrations {
+	if doMigrations {
 		storage.MadeMigrations(a.db)
 	}
 
@@ -100,11 +117,13 @@ func (a *App) InitStorages(madeMigrations bool) {
 func (a *App) MountServices() {
 	repo := repository.NewPostgresRepo(a.db)
 
+	a.setupWS(repo.Messages(), repo.Chats())
+
 	tokenService := shared.NewTokenService(a.cfg.Auth.AccessSecret, a.cfg.Auth.AccessTTL)
 	authService := auth.NewAuthService(repo.Users(), repo.RefreshTokens(), a.cfg.Auth, a.cache, *tokenService, a.logger)
 	userService := user.NewUserService(repo.Users(), a.logger)
 	friendshipService := friendship.NewFriendshipService(repo.Friendship(), a.logger)
-	chatService := chat.NewChatService(repo.Chats(), repo.Users(), a.logger)
+	chatService := chat.NewChatService(repo.Chats(), repo.Users(), a.webSocket.hub, a.webSocket.upgrader, a.logger)
 
 	a.service = api.NewService(authService, *tokenService, userService, friendshipService, chatService)
 }
