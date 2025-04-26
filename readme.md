@@ -37,27 +37,83 @@
 2. Создайте файл .env в корне проекта, заполнив его необходимыми переменными окружения:
 
     ```bash
-    # App
-    APP_ENV="production" # OR DEVELOPMENT
+    # App Configuration
+    # -----------------------------------------
+    # APP_ENV: Режим работы приложения. Возможные значения: "development", "production".
+    # Стандартное значение: "development"
+    APP_ENV="development"
+
+    # ADDR: Адрес и порт, на котором приложение будет слушать запросы.
+    # Стандартное значение: ":8080"
     ADDR=":8080"
+
+    # ACCESS_TTL: Время жизни access токена (время, в течение которого токен действителен).
+    # Стандартное значение: "15m" (15 минут)
     ACCESS_TTL="15m"
+
+    # REFRESH_TTL: Время жизни refresh токена (время, в течение которого refresh токен действителен).
+    # Стандартное значение: "720h" (720 часов или 30 дней)
     REFRESH_TTL="720h"
+
+    # ACCESS_SECRET: Секретный ключ для подписи access токенов.
+    # Стандартное значение: "supersecretaccess"
     ACCESS_SECRET="supersecretaccess"
 
-    # DB
+    # ALLOWED_ORIGINS: Список разрешённых origin (источников), с которых могут поступать запросы.
+    # Значения разделяются сепаратором, заданным переменной ORIGINS_SEPARATOR.
+    # Стандартное значение: "http://localhost:8080"
+    ALLOWED_ORIGINS="http://localhost:8080"
+
+    # ORIGINS_SEPARATOR: Сепаратор для разделения значений в ALLOWED_ORIGINS.
+    # Стандартное значение: ","
+    ORIGINS_SEPARATOR=","
+
+    # Database Configuration
+    # -----------------------------------------
+    # DB_HOST: Хост базы данных.
+    # Стандартное значение: "localhost"
     DB_HOST=db
+
+    # DB_PORT: Порт для подключения к базе данных.
+    # Стандартное значение: "5432"
     DB_PORT=5432
+
+    # DB_USER: Имя пользователя для подключения к базе данных.
+    # Стандартное значение: "postgres"
     DB_USER=postgres
+
+    # DB_PASSWORD: Пароль для подключения к базе данных.
+    # Стандартное значение: "postgres"
     DB_PASSWORD=postgres
+
+    # DB_NAME: Имя базы данных.
+    # Стандартное значение: "socialdb"
     DB_NAME=socialdb
+
+    # DB_SSLMODE: Режим SSL для подключения к базе данных.
+    # Возможные значения: "disable", "require", "verify-ca", "verify-full".
+    # Стандартное значение: "disable"
     DB_SSLMODE=disable
 
-    # Redis
+    # Redis Configuration
+    # -----------------------------------------
+    # REDIS_HOST: Хост Redis сервера.
+    # Стандартное значение: "localhost"
     REDIS_HOST=redis
+
+    # REDIS_PORT: Порт Redis сервера.
+    # Стандартное значение: "6379"
     REDIS_PORT=6379
+
+    # REDIS_PASSWORD: Пароль для подключения к Redis серверу.
+    # Стандартное значение: пусто ("")
     REDIS_PASSWORD=
+
+    # REDIS_DB: Номер базы данных в Redis.
+    # Стандартное значение: 0
     REDIS_DB=0
     ```
+    Сепаратор для ALLOWED_ORIGINS можно поменять, достаточно зайти [settings.go](./internal/setting/setting.go) и установить нужный в методе **`LoadConfig`**
 
 3. Запустите проект через Docker
 
@@ -90,7 +146,7 @@
 
 - **`Dockerfile`** — файл сборки образа приложения.
 - **`docker-compose.yml`** — описание сервисов для запуска в контейнерах (PostgreSQL, Redis, приложение).
-- **`Makefile`** — упрощение часто используемых команд (например, запуск, сборка, тесты).
+- **`Makefile`** — упрощение часто используемых команд (например, запуск, сборка).
 
 ## Поддержка
 

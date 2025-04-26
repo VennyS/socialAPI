@@ -10,8 +10,8 @@ services:
       - mynetwork
     restart: always
     environment:
-      REDIS_PASSWORD: ${REDIS_PASSWORD}  # передаем пароль как переменную окружения
-    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD}"]  # передаем пароль через команду
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD}"]
   db:
     image: postgres:15
     container_name: db
@@ -34,21 +34,6 @@ services:
       - redis
     ports:
       - "${ADDR}:8080"
-    environment:
-      - ADDR=${ADDR}
-      - ACCESS_TTL=${ACCESS_TTL}
-      - REFRESH_TTL=${REFRESH_TTL}
-      - ACCESS_SECRET=${ACCESS_SECRET}
-      - DB_HOST=db
-      - DB_PORT=${DB_PORT}
-      - DB_USER=${DB_USER}
-      - DB_PASSWORD=${DB_PASSWORD}
-      - DB_NAME=${DB_NAME}
-      - DB_SSLMODE=${DB_SSLMODE}
-      - REDIS_HOST=redis
-      - REDIS_PORT=${REDIS_PORT}
-      - REDIS_PASSWORD=${REDIS_PASSWORD}
-      - REDIS_DB=${REDIS_DB}
     env_file:
       - .env
     networks:

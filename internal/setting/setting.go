@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/cors"
 	"github.com/gorilla/websocket"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
@@ -38,10 +39,15 @@ type App struct {
 }
 
 func (a *App) LoadConfig() {
+	addr := lib.GetStringFromEnv("ADDR", ":8080")
+	originsSeparator := lib.GetStringFromEnv("ORIGINS_SEPARATOR", ",")
+
 	a.cfg = cfg.Config{
 		AppEnv: lib.GetStringFromEnv("APP_ENV", "development"),
 		Server: cfg.ServerConfig{
-			Addr: lib.GetStringFromEnv("ADDR", ":8080"),
+			Addr:             addr,
+			OriginsSeparator: originsSeparator,
+			AllowedOrigins:   lib.GetListFromEnv("ALLOWED_ORIGINS", originsSeparator, []string{"localhost" + addr}),
 		},
 		Auth: cfg.AuthConfig{
 			AccessTTL:    lib.GetDurationFromEnv("ACCESS_TTL", 15*time.Minute),
@@ -77,7 +83,7 @@ func (a *App) SetupLogger() {
 func (a *App) setupWS(messageRepo repository.MessageRepository, chatRepo repository.ChatRepository) {
 	a.webSocket = WebSocket{
 		hub:      ws.NewHub(messageRepo, chatRepo, a.logger),
-		upgrader: cfg.NewUpgrader(),
+		upgrader: cfg.NewUpgrader(a.cfg.Server.AllowedOrigins),
 	}
 
 	go a.webSocket.hub.Run()
@@ -135,6 +141,23 @@ func (a App) MountRouter() *chi.Mux {
 	chatController := chat.NewChatController(a.service.Chat(), a.service.Token(), a.logger)
 
 	r := chi.NewRouter()
+	r.Use(cors.Handler(cors.Options{
+		AllowedOrigins: a.cfg.Server.AllowedOrigins,
+		AllowedMethods: []string{"GET", "POST", "PATCH"},
+		AllowedHeaders: []string{
+			"Accept",
+			"Authorization",
+			"Content-Type",
+			"X-CSRF-Token",
+			"Origin",
+			"User-Agent",
+			"Accept-Language",
+			"Cache-Control",
+			"X-Requested-With",
+			"Sec-WebSocket-Origin",
+			"Sec-WebSocket-Protocol",
+		}, AllowCredentials: true,
+	}))
 
 	authController.RegisterRoutes(r)
 	userController.RegisterRoutes(r)

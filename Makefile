@@ -1,6 +1,7 @@
 .PHONY: run, migrate, docker, docker-down, build
 
 run:
+	docker-compose up db redis -d
 	go run cmd/main.go
 
 migrate:

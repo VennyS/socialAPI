@@ -32,6 +32,7 @@ require (
 
 require (
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
+	github.com/go-chi/cors v1.2.1
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect

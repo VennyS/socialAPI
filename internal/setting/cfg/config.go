@@ -11,7 +11,9 @@ type Config struct {
 }
 
 type ServerConfig struct {
-	Addr string
+	Addr             string
+	OriginsSeparator string
+	AllowedOrigins   []string
 }
 
 type AuthConfig struct {
