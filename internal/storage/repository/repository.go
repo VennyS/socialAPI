@@ -7,7 +7,7 @@ type Repository interface {
 	RefreshTokens() RefreshTokenService
 	Friendship() FriendshipRepository
 	Chats() ChatRepository
-	// Messages() MessageRepository
+	Messages() MessageRepository
 	// Notifications() NotificationRepository
 }
 
@@ -16,7 +16,7 @@ type postgresRepo struct {
 	refreshTokens RefreshTokenService
 	friendship    FriendshipRepository
 	chats         ChatRepository
-	// messages      MessageRepository
+	messages      MessageRepository
 	// notifications NotificationRepository
 }
 
@@ -26,7 +26,7 @@ func NewPostgresRepo(db *gorm.DB) Repository {
 		refreshTokens: NewPostgresRefreshtokenService(db),
 		friendship:    NewPostgresFriendshipRepo(db),
 		chats:         NewPostgresChatRepo(db),
-		// messages:      NewPostgresMessageRepo(db),
+		messages:      NewPostgresMessageRepo(db),
 		// notifications: NewPostgresNotificationRepo(db),
 	}
 }
@@ -45,6 +45,10 @@ func (r *postgresRepo) Friendship() FriendshipRepository {
 
 func (r *postgresRepo) Chats() ChatRepository {
 	return r.chats
+}
+
+func (r *postgresRepo) Messages() MessageRepository {
+	return r.messages
 }
 
 // func (r *PostgresRepo) Messages() MessageRepository {
