@@ -11,13 +11,13 @@ import (
 type Client struct {
 	conn    *websocket.Conn
 	send    chan Message
-	hub     *Hub
+	hub     Hub
 	userID  uint
 	chatIDs map[uint]bool
 	logger  *zap.SugaredLogger
 }
 
-func NewClient(conn *websocket.Conn, send chan Message, hub *Hub, userID uint, chatIDs map[uint]bool, logger *zap.SugaredLogger) *Client {
+func NewClient(conn *websocket.Conn, send chan Message, hub Hub, userID uint, chatIDs map[uint]bool, logger *zap.SugaredLogger) *Client {
 	return &Client{conn: conn, send: send, hub: hub, userID: userID, chatIDs: chatIDs, logger: logger}
 }
 
@@ -28,7 +28,7 @@ type IncomingMessage struct {
 
 func (c *Client) ReadPump() {
 	defer func() {
-		c.hub.unregister <- c
+		c.hub.UnregisterClient(c)
 		c.conn.Close()
 	}()
 
@@ -49,10 +49,10 @@ func (c *Client) ReadPump() {
 			return
 		}
 
-		c.hub.broadcast <- Message{
+		c.hub.BroadcastMessage(Message{
 			IncomingMessage: msgStruct,
 			SenderID:        c.userID,
-		}
+		})
 	}
 }
 

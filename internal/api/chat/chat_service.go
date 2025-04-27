@@ -3,10 +3,10 @@ package chat
 import (
 	"net/http"
 	chatWS "socialAPI/internal/api/chat/ws"
+	"socialAPI/internal/setting/cfg"
 	"socialAPI/internal/shared"
 	r "socialAPI/internal/storage/repository"
 
-	"github.com/gorilla/websocket"
 	"go.uber.org/zap"
 )
 
@@ -21,12 +21,12 @@ type ChatService interface {
 type chatService struct {
 	userRepo   r.UserRepository
 	chatRepo   r.ChatRepository
-	hub        *chatWS.Hub
-	wsUpgrader *websocket.Upgrader
+	hub        chatWS.Hub
+	wsUpgrader cfg.Upgrader
 	logger     *zap.SugaredLogger
 }
 
-func NewChatService(chatRepo r.ChatRepository, userRepo r.UserRepository, hub *chatWS.Hub, wsUpgrader *websocket.Upgrader, logger *zap.SugaredLogger) ChatService {
+func NewChatService(chatRepo r.ChatRepository, userRepo r.UserRepository, hub chatWS.Hub, wsUpgrader cfg.Upgrader, logger *zap.SugaredLogger) ChatService {
 	return &chatService{chatRepo: chatRepo, userRepo: userRepo, hub: hub, wsUpgrader: wsUpgrader, logger: logger}
 }
 
@@ -44,14 +44,14 @@ func (c chatService) checksUsersAndChatExistense(req CreateRequest) *shared.Http
 
 	exists, err = c.chatRepo.ExistsSetUserIDs(req.UserIDs)
 
-	if exists {
-		c.logger.Warnw("Chat with the same users already exists", "userIDs", req.UserIDs, "name", req.Name)
-		return shared.NewHttpError("chat with the same users already exists", http.StatusBadRequest)
-	}
-
 	if err != nil {
 		c.logger.Errorw("Error checking chat with this userIDs", "userIDs", req.UserIDs, "name", req.Name, "error", err)
 		return shared.InternalError
+	}
+
+	if exists {
+		c.logger.Warnw("Chat with the same users already exists", "userIDs", req.UserIDs, "name", req.Name)
+		return shared.NewHttpError("chat with the same users already exists", http.StatusBadRequest)
 	}
 
 	return nil
@@ -177,7 +177,7 @@ func (c chatService) HandleWebSocket(userID uint, w http.ResponseWriter, r *http
 
 	client := chatWS.NewClient(conn, make(chan chatWS.Message, 256), c.hub, userID, chatIDMap, c.logger)
 
-	c.hub.Register <- client
+	c.hub.RegisterClient(client)
 
 	c.logger.Infow("Client registered in hub", "userID", userID)
 

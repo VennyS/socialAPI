@@ -19,14 +19,13 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/cors"
-	"github.com/gorilla/websocket"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
 type WebSocket struct {
-	hub      *ws.Hub
-	upgrader *websocket.Upgrader
+	hub      ws.Hub
+	upgrader cfg.Upgrader
 }
 
 type App struct {
