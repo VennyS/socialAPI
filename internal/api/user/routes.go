@@ -14,7 +14,7 @@ type UserController struct {
 	logger       *zap.SugaredLogger
 }
 
-func NewAuthController(userService UserService, tokenService shared.TokenService, logger *zap.SugaredLogger) *UserController {
+func NewUserController(userService UserService, tokenService shared.TokenService, logger *zap.SugaredLogger) *UserController {
 	return &UserController{userService: userService, tokenService: tokenService, logger: logger}
 }
 

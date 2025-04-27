@@ -136,7 +136,7 @@ func (a *App) MountServices() {
 
 func (a App) MountRouter() *chi.Mux {
 	authController := auth.NewAuthController(a.service.Auth(), a.service.Token(), a.logger)
-	userController := user.NewAuthController(a.service.User(), a.service.Token(), a.logger)
+	userController := user.NewUserController(a.service.User(), a.service.Token(), a.logger)
 	friendshipController := friendship.NewFriendshipController(a.service.Friendship(), a.service.Token(), a.logger)
 	chatController := chat.NewChatController(a.service.Chat(), a.service.Token(), a.logger)
 
