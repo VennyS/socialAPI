@@ -1,4 +1,4 @@
-.PHONY: run, migrate, docker, docker-down, build
+.PHONY: run, migrate, docker, docker-down, build, mockery, test
 
 run:
 	docker-compose up db redis -d
@@ -15,3 +15,9 @@ docker-down:
 
 build:
 	docker-compose up --build
+
+mocks:
+	mockery --all --output=./internal/mocks
+
+test:
+	go test ./...

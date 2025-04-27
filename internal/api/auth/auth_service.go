@@ -106,7 +106,7 @@ func (a authService) Authenticate(r UserRequest) (*shared.TokenPair, *shared.Htt
 	tokenPair, hErr := a.generateAndStoreTokens(user.ID)
 	if hErr != nil {
 		a.logger.Errorw("Error generating and storing tokens", "userID", user.ID)
-		return tokenPair, shared.InternalError
+		return nil, shared.InternalError
 	}
 
 	a.logger.Infow("User authenticated successfully", "email", r.Email)
