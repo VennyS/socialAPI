@@ -125,7 +125,7 @@ func (a *App) MountServices() {
 	a.setupWS(repo.Messages(), repo.Chats())
 
 	tokenService := shared.NewTokenService(a.cfg.Auth.AccessSecret, a.cfg.Auth.AccessTTL)
-	authService := auth.NewAuthService(repo.Users(), repo.RefreshTokens(), a.cfg.Auth, a.cache, tokenService, a.logger)
+	authService := auth.NewAuthService(repo.Users(), repo.RefreshTokens(), a.cfg.Auth, a.cache, tokenService, &lib.BcryptHasher{}, a.logger)
 	userService := user.NewUserService(repo.Users(), a.logger)
 	friendshipService := friendship.NewFriendshipService(repo.Friendship(), a.logger)
 	chatService := chat.NewChatService(repo.Chats(), repo.Users(), a.webSocket.hub, a.webSocket.upgrader, a.logger)

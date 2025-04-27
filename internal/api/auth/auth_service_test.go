@@ -22,6 +22,7 @@ type authServiceMocks struct {
 	refreshRepo *mocks.RefreshTokenService
 	cacheStore  *mocks.CacheStore
 	tokenSvc    *mocks.TokenService
+	hasher      *mocks.PasswordHasher
 	authSvc     auth.AuthService
 	cfg         cfg.AuthConfig
 }
@@ -30,6 +31,7 @@ func setupAuthService() authServiceMocks {
 	userRepo := new(mocks.UserRepository)
 	refreshRepo := new(mocks.RefreshTokenService)
 	cacheStore := new(mocks.CacheStore)
+	hasher := new(mocks.PasswordHasher)
 	tokenSvc := new(mocks.TokenService)
 	logger := zap.NewNop().Sugar()
 
@@ -38,13 +40,14 @@ func setupAuthService() authServiceMocks {
 		RefreshTTL: time.Hour * 24,
 	}
 
-	authSvc := auth.NewAuthService(userRepo, refreshRepo, config, cacheStore, tokenSvc, logger)
+	authSvc := auth.NewAuthService(userRepo, refreshRepo, config, cacheStore, tokenSvc, hasher, logger)
 
 	return authServiceMocks{
 		userRepo:    userRepo,
 		refreshRepo: refreshRepo,
 		cacheStore:  cacheStore,
 		tokenSvc:    tokenSvc,
+		hasher:      hasher,
 		authSvc:     authSvc,
 		cfg:         config,
 	}
@@ -61,24 +64,45 @@ func TestAuthService_Register(t *testing.T) {
 	tests := []struct {
 		name       string
 		email      string
-		setupMock  func(m *mocks.UserRepository)
+		setupMock  func(m *authServiceMocks)
 		wantErr    bool
 		errMessage string
 	}{
 		{
+			name:  "error checking if user exists",
+			email: "error@example.com",
+			setupMock: func(m *authServiceMocks) {
+				m.userRepo.On("EmailExists", "error@example.com").Return(false, errExample)
+			},
+			wantErr:    true,
+			errMessage: shared.InternalError.Error(),
+		},
+		{
 			name:  "user already exists",
 			email: "test@example.com",
-			setupMock: func(m *mocks.UserRepository) {
-				m.On("EmailExists", "test@example.com").Return(true, nil)
+			setupMock: func(m *authServiceMocks) {
+				m.userRepo.On("EmailExists", "test@example.com").Return(true, nil)
 			},
 			wantErr:    true,
 			errMessage: "user already exists",
 		},
 		{
-			name:  "error checking user existence",
-			email: "error@example.com",
-			setupMock: func(m *mocks.UserRepository) {
-				m.On("EmailExists", "error@example.com").Return(false, errors.New("db error"))
+			name:  "error hashing password",
+			email: "test@example.com",
+			setupMock: func(m *authServiceMocks) {
+				m.userRepo.On("EmailExists", "test@example.com").Return(false, nil)
+				m.hasher.On("HashPassword", passwordExample).Return(user.Password, errExample)
+			},
+			wantErr:    true,
+			errMessage: shared.InternalError.Error(),
+		},
+		{
+			name:  "error creating new user",
+			email: "test@example.com",
+			setupMock: func(m *authServiceMocks) {
+				m.userRepo.On("EmailExists", "test@example.com").Return(false, nil)
+				m.hasher.On("HashPassword", passwordExample).Return(user.Password, nil)
+				m.userRepo.On("Create", mock.Anything).Return(errExample)
 			},
 			wantErr:    true,
 			errMessage: shared.InternalError.Error(),
@@ -86,9 +110,10 @@ func TestAuthService_Register(t *testing.T) {
 		{
 			name:  "successfully register user",
 			email: "new@example.com",
-			setupMock: func(m *mocks.UserRepository) {
-				m.On("EmailExists", "new@example.com").Return(false, nil)
-				m.On("Create", mock.AnythingOfType("*repository.User")).Return(nil)
+			setupMock: func(m *authServiceMocks) {
+				m.userRepo.On("EmailExists", "new@example.com").Return(false, nil)
+				m.hasher.On("HashPassword", passwordExample).Return(user.Password, nil)
+				m.userRepo.On("Create", mock.AnythingOfType("*repository.User")).Return(nil)
 			},
 			wantErr: false,
 		},
@@ -97,11 +122,11 @@ func TestAuthService_Register(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mocks := setupAuthService()
-			tt.setupMock(mocks.userRepo)
+			tt.setupMock(&mocks)
 
 			err := mocks.authSvc.Register(auth.UserRequest{
 				Email:    tt.email,
-				Password: "password",
+				Password: passwordExample,
 			})
 
 			if tt.wantErr {
@@ -146,7 +171,8 @@ func TestAuthService_Authenticate(t *testing.T) {
 		{
 			name: "invalid credentials",
 			setup: func(m authServiceMocks) {
-				m.userRepo.On("FindByEmail", user.Email).Return(&user, nil)
+				m.userRepo.On("FindByEmail", mock.Anything).Return(&user, nil)
+				m.hasher.On("ComparePasswords", mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return(errExample)
 			},
 			wantTokens: false,
 			wantErr:    true,
@@ -156,6 +182,7 @@ func TestAuthService_Authenticate(t *testing.T) {
 			name: "error generating token pair",
 			setup: func(m authServiceMocks) {
 				m.userRepo.On("FindByEmail", user.Email).Return(&user, nil)
+				m.hasher.On("ComparePasswords", mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return(nil)
 				m.tokenSvc.On("GenerateTokenPair", user.ID).Return(nil, shared.InternalError)
 			},
 			wantTokens: false,
@@ -167,6 +194,7 @@ func TestAuthService_Authenticate(t *testing.T) {
 			name: "error storing access token in cache",
 			setup: func(m authServiceMocks) {
 				m.userRepo.On("FindByEmail", user.Email).Return(&user, nil)
+				m.hasher.On("ComparePasswords", mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return(nil)
 				m.tokenSvc.On("GenerateTokenPair", user.ID).Return(&tokenPairExample, nil)
 				m.cacheStore.On("Set", fmt.Sprintf("access_token:%d", user.ID), tokenPairExample.AccessToken, m.cfg.AccessTTL).Return(errExample)
 			},
@@ -179,6 +207,7 @@ func TestAuthService_Authenticate(t *testing.T) {
 			name: "error storing refresh token",
 			setup: func(m authServiceMocks) {
 				m.userRepo.On("FindByEmail", user.Email).Return(&user, nil)
+				m.hasher.On("ComparePasswords", mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return(nil)
 				m.tokenSvc.On("GenerateTokenPair", user.ID).Return(&tokenPairExample, nil)
 				m.cacheStore.On("Set", fmt.Sprintf("access_token:%d", user.ID), tokenPairExample.AccessToken, m.cfg.AccessTTL).Return(nil)
 				m.refreshRepo.On("SetRefreshToken", user.ID, tokenPairExample.RefreshToken, mock.AnythingOfType("time.Time")).Return(errExample)
@@ -192,6 +221,7 @@ func TestAuthService_Authenticate(t *testing.T) {
 			name: "user authenticated successfully",
 			setup: func(m authServiceMocks) {
 				m.userRepo.On("FindByEmail", user.Email).Return(&user, nil)
+				m.hasher.On("ComparePasswords", mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return(nil)
 				m.tokenSvc.On("GenerateTokenPair", user.ID).Return(&tokenPairExample, nil)
 				m.cacheStore.On("Set", fmt.Sprintf("access_token:%d", user.ID), tokenPairExample.AccessToken, m.cfg.AccessTTL).Return(nil)
 				m.refreshRepo.On("SetRefreshToken", user.ID, tokenPairExample.RefreshToken, mock.AnythingOfType("time.Time")).Return(nil)
@@ -209,10 +239,6 @@ func TestAuthService_Authenticate(t *testing.T) {
 			req := auth.UserRequest{
 				Email:    user.Email,
 				Password: passwordExample,
-			}
-
-			if tt.name == "invalid credentials" {
-				req.Password = "wrong password"
 			}
 
 			tokenPair, err := m.authSvc.Authenticate(req)
@@ -364,6 +390,16 @@ func TestAuthService_Revoke(t *testing.T) {
 			setup: func(m authServiceMocks) {
 				m.refreshRepo.On("GetUserIDIfValid", tokenPairExample.RefreshToken).Return(uint(1), nil)
 				m.refreshRepo.On("RevokeRefreshToken", tokenPairExample.RefreshToken).Return(errExample)
+			},
+			wantErr:    true,
+			errMessage: shared.InternalError.Error(),
+		},
+		{
+			name: "error deleting access token from cache",
+			setup: func(m authServiceMocks) {
+				m.refreshRepo.On("GetUserIDIfValid", tokenPairExample.RefreshToken).Return(uint(1), nil)
+				m.refreshRepo.On("RevokeRefreshToken", tokenPairExample.RefreshToken).Return(nil)
+				m.cacheStore.On("Delete", fmt.Sprintf("access_token:%d", uint(1))).Return(errExample)
 			},
 			wantErr:    true,
 			errMessage: shared.InternalError.Error(),

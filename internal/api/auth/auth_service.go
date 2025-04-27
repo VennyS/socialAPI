@@ -23,16 +23,17 @@ type AuthService interface {
 }
 
 type authService struct {
-	userRepo     repository.UserRepository
-	refreshRepo  repository.RefreshTokenService
-	cfg          cfg.AuthConfig
-	cache        cache.CacheStore
-	tokenService shared.TokenService
-	logger       *zap.SugaredLogger
+	userRepo       repository.UserRepository
+	refreshRepo    repository.RefreshTokenService
+	cfg            cfg.AuthConfig
+	cache          cache.CacheStore
+	tokenService   shared.TokenService
+	passwordHasher lib.PasswordHasher
+	logger         *zap.SugaredLogger
 }
 
-func NewAuthService(userRepo repository.UserRepository, refreshRepo repository.RefreshTokenService, cfg cfg.AuthConfig, cache cache.CacheStore, tokenService shared.TokenService, logger *zap.SugaredLogger) AuthService {
-	return &authService{userRepo: userRepo, refreshRepo: refreshRepo, cfg: cfg, cache: cache, tokenService: tokenService, logger: logger}
+func NewAuthService(userRepo repository.UserRepository, refreshRepo repository.RefreshTokenService, cfg cfg.AuthConfig, cache cache.CacheStore, tokenService shared.TokenService, passwordHasher lib.PasswordHasher, logger *zap.SugaredLogger) AuthService {
+	return &authService{userRepo: userRepo, refreshRepo: refreshRepo, cfg: cfg, cache: cache, tokenService: tokenService, passwordHasher: passwordHasher, logger: logger}
 }
 
 func (a authService) generateAndStoreTokens(id uint) (*shared.TokenPair, *shared.HttpError) {
@@ -70,7 +71,7 @@ func (a authService) Register(r UserRequest) *shared.HttpError {
 		return shared.NewHttpError("user already exists", http.StatusNotFound)
 	}
 
-	hashedPassword, err := lib.HashPassword(r.Password)
+	hashedPassword, err := a.passwordHasher.HashPassword(r.Password)
 	if err != nil {
 		a.logger.Errorw("Error hashing password", "error", err)
 		return shared.InternalError
@@ -97,7 +98,7 @@ func (a authService) Authenticate(r UserRequest) (*shared.TokenPair, *shared.Htt
 		return nil, shared.InternalError
 	}
 
-	err = lib.ComparePasswords(user.Password, r.Password)
+	err = a.passwordHasher.ComparePasswords(user.Password, r.Password)
 	if err != nil {
 		a.logger.Warnw("Invalid credentials", "email", r.Email)
 		return nil, shared.InvalidCredentials
