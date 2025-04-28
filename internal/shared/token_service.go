@@ -62,6 +62,10 @@ func (ts *jwtTokenService) GenerateTokenPair(userID uint) (*TokenPair, error) {
 
 // generateAccessToken creates a new JWT access token
 func (ts *jwtTokenService) GenerateAccessToken(userID uint) (string, error) {
+	if ts.accessSecret == "" {
+		return "", errors.New("signing key is empty")
+	}
+
 	claims := &Claims{
 		UserID: userID,
 		StandardClaims: jwt.StandardClaims{
