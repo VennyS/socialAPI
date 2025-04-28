@@ -10,12 +10,19 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-func HashPassword(password string) (string, error) {
+type PasswordHasher interface {
+	HashPassword(password string) (string, error)
+	ComparePasswords(hashedPwd string, plainPwd string) error
+}
+
+type BcryptHasher struct{}
+
+func (b *BcryptHasher) HashPassword(password string) (string, error) {
 	bytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	return string(bytes), err
 }
 
-func ComparePasswords(hashedPwd string, plainPwd string) error {
+func (b *BcryptHasher) ComparePasswords(hashedPwd string, plainPwd string) error {
 	return bcrypt.CompareHashAndPassword([]byte(hashedPwd), []byte(plainPwd))
 }
 

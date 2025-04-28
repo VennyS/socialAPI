@@ -99,7 +99,7 @@
     # -----------------------------------------
     # REDIS_HOST: Хост Redis сервера.
     # Стандартное значение: "localhost"
-    REDIS_HOST=redis
+    REDIS_HOST=localhost
 
     # REDIS_PORT: Порт Redis сервера.
     # Стандартное значение: "6379"
@@ -113,7 +113,6 @@
     # Стандартное значение: 0
     REDIS_DB=0
     ```
-    Сепаратор для ALLOWED_ORIGINS можно поменять, достаточно зайти [settings.go](./internal/setting/setting.go) и установить нужный в методе **`LoadConfig`**
 
 3. Запустите проект через Docker
 

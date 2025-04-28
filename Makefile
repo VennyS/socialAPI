@@ -1,4 +1,7 @@
-.PHONY: run, migrate, docker, docker-down, build
+.PHONY: run, migrate, docker, docker-down, build, mockery, test, coverage, clean
+
+COVERAGE_FILE = coverage.out
+COVERAGE_HTML = coverage.html
 
 run:
 	docker-compose up db redis -d
@@ -15,3 +18,18 @@ docker-down:
 
 build:
 	docker-compose up --build
+
+mocks:
+	mockery --all --output=./internal/mocks
+
+clean-cache:
+	go clean -testcache
+
+test: clean clean-cache
+	go test ./... -coverprofile=$(COVERAGE_FILE)
+
+coverage: test
+	go tool cover -html=$(COVERAGE_FILE) -o $(COVERAGE_HTML)
+
+clean:
+	rm -f $(COVERAGE_FILE) $(COVERAGE_HTML)

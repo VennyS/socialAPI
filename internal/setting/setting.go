@@ -19,14 +19,13 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/cors"
-	"github.com/gorilla/websocket"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
 type WebSocket struct {
-	hub      *ws.Hub
-	upgrader *websocket.Upgrader
+	hub      ws.Hub
+	upgrader cfg.Upgrader
 }
 
 type App struct {
@@ -126,17 +125,17 @@ func (a *App) MountServices() {
 	a.setupWS(repo.Messages(), repo.Chats())
 
 	tokenService := shared.NewTokenService(a.cfg.Auth.AccessSecret, a.cfg.Auth.AccessTTL)
-	authService := auth.NewAuthService(repo.Users(), repo.RefreshTokens(), a.cfg.Auth, a.cache, *tokenService, a.logger)
+	authService := auth.NewAuthService(repo.Users(), repo.RefreshTokens(), a.cfg.Auth, a.cache, tokenService, &lib.BcryptHasher{}, a.logger)
 	userService := user.NewUserService(repo.Users(), a.logger)
 	friendshipService := friendship.NewFriendshipService(repo.Friendship(), a.logger)
 	chatService := chat.NewChatService(repo.Chats(), repo.Users(), a.webSocket.hub, a.webSocket.upgrader, a.logger)
 
-	a.service = api.NewService(authService, *tokenService, userService, friendshipService, chatService)
+	a.service = api.NewService(authService, tokenService, userService, friendshipService, chatService)
 }
 
 func (a App) MountRouter() *chi.Mux {
 	authController := auth.NewAuthController(a.service.Auth(), a.service.Token(), a.logger)
-	userController := user.NewAuthController(a.service.User(), a.service.Token(), a.logger)
+	userController := user.NewUserController(a.service.User(), a.service.Token(), a.logger)
 	friendshipController := friendship.NewFriendshipController(a.service.Friendship(), a.service.Token(), a.logger)
 	chatController := chat.NewChatController(a.service.Chat(), a.service.Token(), a.logger)
 

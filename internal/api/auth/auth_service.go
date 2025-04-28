@@ -9,7 +9,6 @@ import (
 	"socialAPI/internal/shared"
 	"socialAPI/internal/storage/cache"
 	"socialAPI/internal/storage/repository"
-	r "socialAPI/internal/storage/repository"
 	"time"
 
 	"go.uber.org/zap"
@@ -24,16 +23,17 @@ type AuthService interface {
 }
 
 type authService struct {
-	userRepo     r.UserRepository
-	refreshRepo  r.RefreshTokenService
-	cfg          cfg.AuthConfig
-	cache        cache.CacheStore
-	tokenService shared.TokenService
-	logger       *zap.SugaredLogger
+	userRepo       repository.UserRepository
+	refreshRepo    repository.RefreshTokenService
+	cfg            cfg.AuthConfig
+	cache          cache.CacheStore
+	tokenService   shared.TokenService
+	passwordHasher lib.PasswordHasher
+	logger         *zap.SugaredLogger
 }
 
-func NewAuthService(userRepo r.UserRepository, refreshRepo r.RefreshTokenService, cfg cfg.AuthConfig, cache cache.CacheStore, tokenService shared.TokenService, logger *zap.SugaredLogger) AuthService {
-	return &authService{userRepo: userRepo, refreshRepo: refreshRepo, cfg: cfg, cache: cache, tokenService: tokenService, logger: logger}
+func NewAuthService(userRepo repository.UserRepository, refreshRepo repository.RefreshTokenService, cfg cfg.AuthConfig, cache cache.CacheStore, tokenService shared.TokenService, passwordHasher lib.PasswordHasher, logger *zap.SugaredLogger) AuthService {
+	return &authService{userRepo: userRepo, refreshRepo: refreshRepo, cfg: cfg, cache: cache, tokenService: tokenService, passwordHasher: passwordHasher, logger: logger}
 }
 
 func (a authService) generateAndStoreTokens(id uint) (*shared.TokenPair, *shared.HttpError) {
@@ -71,7 +71,7 @@ func (a authService) Register(r UserRequest) *shared.HttpError {
 		return shared.NewHttpError("user already exists", http.StatusNotFound)
 	}
 
-	hashedPassword, err := lib.HashPassword(r.Password)
+	hashedPassword, err := a.passwordHasher.HashPassword(r.Password)
 	if err != nil {
 		a.logger.Errorw("Error hashing password", "error", err)
 		return shared.InternalError
@@ -98,7 +98,7 @@ func (a authService) Authenticate(r UserRequest) (*shared.TokenPair, *shared.Htt
 		return nil, shared.InternalError
 	}
 
-	err = lib.ComparePasswords(user.Password, r.Password)
+	err = a.passwordHasher.ComparePasswords(user.Password, r.Password)
 	if err != nil {
 		a.logger.Warnw("Invalid credentials", "email", r.Email)
 		return nil, shared.InvalidCredentials
@@ -107,7 +107,7 @@ func (a authService) Authenticate(r UserRequest) (*shared.TokenPair, *shared.Htt
 	tokenPair, hErr := a.generateAndStoreTokens(user.ID)
 	if hErr != nil {
 		a.logger.Errorw("Error generating and storing tokens", "userID", user.ID)
-		return tokenPair, shared.InternalError
+		return nil, shared.InternalError
 	}
 
 	a.logger.Infow("User authenticated successfully", "email", r.Email)

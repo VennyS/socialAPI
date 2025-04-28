@@ -20,8 +20,8 @@ func NewFriendshipController(friendshipService FriendshipService, tokenService s
 
 func (f FriendshipController) RegisterRoutes(r *chi.Mux) {
 	r.Route("/v1/friendship", func(r chi.Router) {
-		r.With(middleware.AuthMiddleware(&f.tokenService, f.logger), middleware.JsonBodyMiddleware[FriendshipPostRequest](f.logger)).Post("/", f.SendRequestHandler())
-		r.With(middleware.AuthMiddleware(&f.tokenService, f.logger)).Get("/", f.GetFriendsHandler())
-		r.With(middleware.AuthMiddleware(&f.tokenService, f.logger), middleware.JsonBodyMiddleware[ChangeStatusRequest](f.logger)).Patch("/{id}", f.PutStatusHandler())
+		r.With(middleware.AuthMiddleware(f.tokenService, f.logger), middleware.JsonBodyMiddleware[FriendshipPostRequest](f.logger)).Post("/", f.SendRequestHandler())
+		r.With(middleware.AuthMiddleware(f.tokenService, f.logger)).Get("/", f.GetFriendsHandler())
+		r.With(middleware.AuthMiddleware(f.tokenService, f.logger), middleware.JsonBodyMiddleware[ChangeStatusRequest](f.logger)).Patch("/{id}", f.PutStatusHandler())
 	})
 }

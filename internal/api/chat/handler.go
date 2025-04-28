@@ -4,20 +4,29 @@ import (
 	"net/http"
 	"socialAPI/internal/api/middleware"
 	"socialAPI/internal/lib"
+	"strconv"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
 )
 
 func (c ChatController) GetOneHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		chatID := r.Context().Value(middleware.UserIDKey).(uint)
+		chatIDParam := chi.URLParam(r, "id")
+		chatIDUint64, err := strconv.ParseUint(chatIDParam, 10, 32)
+		if err != nil {
+			c.logger.Warnw("Invalid chat ID parameter", "chatID", chatIDParam, "error", err.Error())
+			lib.SendMessage(w, r, http.StatusBadRequest, "Invalid id parameter")
+			return
+		}
+		chatID := uint(chatIDUint64)
 
 		c.logger.Infow("Handling GetOne request", "chatID", chatID)
 
-		chat, err := c.chatService.GetOne(chatID)
-		if err != nil {
+		chat, hErr := c.chatService.GetOne(chatID)
+		if hErr != nil {
 			c.logger.Errorw("Failed to get chat", "chatID", chatID, "error", err)
-			lib.SendMessage(w, r, err.StatusCode, err.Error())
+			lib.SendMessage(w, r, hErr.StatusCode, hErr.Error())
 			return
 		}
 
